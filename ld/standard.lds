@@ -31,7 +31,7 @@ SECTIONS
    */
   .drivers : {
     __drivers_start = .;
-    *virtio.c.*(.driver_inits)
+    *virtio_driver.c.*(.driver_inits)
     __drivers_end = .;
   }
 

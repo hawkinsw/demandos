@@ -4,6 +4,7 @@
 #include "virtio.h"
 #include <memory.h>
 #include <stdint.h>
+#include "system.h"
 
 
 uint32_t pci_config_space_alloc() {
@@ -104,4 +105,19 @@ void configure_pci() {
 
   // Now, scan the bus!
   pci_scan();
+}
+
+void pci_device_set_status(void *pci_cfg, uint8_t status) {
+  // Change the status of the PCI card.
+  uint8_t card_status = PCI_DEVICE_STATUS_UP;
+  volatile uint8_t *card_status_p = (uint8_t *)(pci_cfg + PCI_DEVICE_STATUS_OFFSET);
+  *card_status_p = card_status;
+  WRITE_FENCE();
+}
+
+void pci_device_set_bar(void *pci_cfg, uint8_t which, uint32_t value) {
+  uint64_t offset = BAR0_OFFSET + (which * sizeof(uint32_t));
+  uint32_t *bar_p = (uint32_t *)(pci_cfg + offset);
+  *bar_p = value;
+  WRITE_FENCE();
 }
