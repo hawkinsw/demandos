@@ -4,9 +4,14 @@ project(unibpform DESCRIPTION "A unikernel for eBPF programs.")
 
 enable_language(ASM)
 
-set(DRIVER_SRCS
-	./driver/main.c
+set(FS_TEST_DRIVER_SRCS
+	./driver/fs_test_main.c
 )
+
+set(DRIVER_SRCS
+	./driver/simple_test_main.c
+)
+
 set(SRCS 
 	./src/boot.S
 	./src/io.c
@@ -18,8 +23,9 @@ set(SRCS
 	./src/pci.c
 	./src/util.c
 	./src/virtio.c
+	./src/virtio_driver.c
 	./src/blk.c
-	${DRIVER_SRCS}
+	${FS_TEST_DRIVER_SRCS}
 )
 
 
@@ -43,4 +49,7 @@ target_include_directories(standalone-driver PRIVATE include)
 target_link_options(standalone-driver PRIVATE -static)
 
 
+# Targets for manipulating the testing environment.
 
+# Create a simple qcow2 image for testing:
+add_custom_target(make-simple-qcow2 qemu-img "create" "-f" "qcow2" "${CMAKE_SOURCE_DIR}/test/fs/simple.qcow2" "512B")

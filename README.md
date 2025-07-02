@@ -40,6 +40,14 @@ If you want to redirect the output that would otherwise go to the console to a T
 -device virtconsole,chardev=vcon, -chardev socket,id=vcon,ipv4=on,host=localhost,port=2222,server=on,telnet=on,wait=on -serial stdio
 ```
 
+If you want to add a block device, add:
+
+```console
+-device virtio-blk-pci,drive=drive0,id=virtblk0,num-queues=2 -drive file=<DISK IMAGE FILEPATH>,if=none,id=drive0,cache=writethrough
+```
+
+where `<DISK IMAGE FILEPATH>` is an appropriate path. See [below](#block-devices) for information on creating and inspecting block devices.
+
 [^2]: See [^1] for a basic description of these options.
 
 **Other Options**
@@ -57,3 +65,31 @@ $ dtc qemu.dtb
 ```
 
 will pretty print the device tree in the file `qemu.dtb`. See above for generating that file.
+
+### Block Devices
+
+To create a qcow2 block device:
+
+```console
+$ qemu-img create -f qcow2 <NAME> <SIZE>
+```
+where `<NAME>` is the name of the disk image that is created and `<SIZE>` is the size. You can specify size with `B`, `K`, `M`, etc. See `qemu-img`'s `man` page for more information.
+
+To create a good image for testing, use:
+```console
+$ qemu-img create -f qcow2 simple.qcow2 512B
+```
+
+(or use the make-simple-qcow2 CMake target).
+
+To read the raw contents of a qcow2 disk image, use `qemu-img`'s `dd` subcommand (which works much like `dd`). For example,
+
+```console
+$ qemu-img dd if=simple.qcow2 of=simple.qcow2.dd
+```
+
+will read the entirety of `simple.qcow2` and write it to `simple.qcow2.dd`. _That_ file can be displayed nicely with `hexdump`:
+
+```console
+$ hexdump -C simple.qcow2.dd
+```

@@ -86,15 +86,25 @@ uint64_t get_random_s(uint64_t _buffer, uint64_t /* size_t */ _length,
     return -1;
   }
 
-  for (size_t filled = 0; filled < length; filled += chunk_size) {
-    make_virtio_req(driver->vring, (void *)buf, chunk_size, 2);
+  uint16_t next = driver->vring->bookeeping.descr_next;
 
+  for (size_t filled = 0; filled < length; filled += chunk_size) {
+    uint32_t just_used = next;
+    next = vring_add_to_descr(driver->vring, (void *)buf, chunk_size, 2, next,
+                              true);
+
+    vring_use_avail(&driver->vring[0], just_used);
     signal_virtio_device(driver, 0);
-    wait_virtio_completion(&driver->vring[0]);
+    vring_wait_completion(&driver->vring[0]);
 
 #if DEBUG_LEVEL > DEBUG_TRACE
-    for (int i = 0; i < chunk_size; i++) {
-      eprint_num(buf[i]);
+    {
+      char msg[] = "Randomness retrieved: ";
+      eprint_str(msg);
+      for (int i = 0; i < chunk_size; i++) {
+        eprint_num(buf[i]);
+        eprint(',');
+      }
       eprint('\n');
     }
 #endif
@@ -122,6 +132,30 @@ uint64_t openat_s(uint64_t _dirfd, uint64_t _pathname, uint64_t _flags,
   return open_fd(pathname);
 }
 
+uint64_t seek_s(uint64_t _fd, uint64_t _offset, uint64_t _whence, uint64_t d,
+                uint64_t e, uint64_t f) {
+  uint64_t fd = _fd;
+  long int offset = (long int)_offset;
+
+  if (!is_fd_open(fd)) {
+    return -1;
+  }
+
+  return fds[fd].seek_handler(fd, offset, _whence);
+}
+
+uint64_t read_s(uint64_t _fd, uint64_t _buf, uint64_t _size, uint64_t d,
+                uint64_t e, uint64_t f) {
+  char *buf = (char *)_buf;
+  size_t size = (size_t)_size;
+  uint64_t fd = _fd;
+
+  if (!is_fd_open(fd)) {
+    return -1;
+  }
+  return fds[fd].read_handler(fd, buf, size);
+}
+
 uint64_t write_s(uint64_t _fd, uint64_t _buf, uint64_t _size, uint64_t d,
                  uint64_t e, uint64_t f) {
   char *buf = (char *)_buf;
@@ -132,16 +166,6 @@ uint64_t write_s(uint64_t _fd, uint64_t _buf, uint64_t _size, uint64_t d,
     return -1;
   }
   return fds[fd].write_handler(fd, buf, size);
-}
-
-uint64_t writev_s(uint64_t new_brk, uint64_t b, uint64_t c, uint64_t d,
-                  uint64_t e, uint64_t f) {
-#if DEBUG_LEVEL > DEBUG_TRACE
-  char here[] = "Here in writev\n";
-  eprint_str(here);
-#endif
-
-  return 0x5;
 }
 
 uint64_t empty(uint64_t new_brk, uint64_t b, uint64_t c, uint64_t d, uint64_t e,
@@ -312,6 +336,10 @@ uint64_t software_interrupt_handler(void) {
 }
 
 void configure_syscall_handlers(void) {
+  for (int i = 0; i < sizeof(syscall_handlers) / sizeof(syscall_handler); i++) {
+    syscall_handlers[i] = unimplemented;
+  }
+
   syscall_handlers[258] = hardware_riscv;
   syscall_handlers[222] = empty;
   syscall_handlers[64] = write_s;
@@ -324,12 +352,13 @@ void configure_syscall_handlers(void) {
   syscall_handlers[78] = readlinkat_s;
   syscall_handlers[278] = get_random_s;
   syscall_handlers[113] = clock_gettime32_s;
-  syscall_handlers[66] = writev_s;
   syscall_handlers[226] = mprotect_s;
   syscall_handlers[80] = fstat_s;
   syscall_handlers[29] = ioctl_s;
   syscall_handlers[14] = sys_breakpoint;
   syscall_handlers[56] = openat_s;
+  syscall_handlers[63] = read_s;
+  syscall_handlers[62] = seek_s;
 }
 
 uint64_t system_call_dispatcher(uint64_t cause, uint64_t location,
@@ -338,32 +367,24 @@ uint64_t system_call_dispatcher(uint64_t cause, uint64_t location,
                                 uint64_t a3, uint64_t a4, uint64_t a5) {
 
 #if DEBUG_LEVEL > DEBUG_TRACE
-  eprint('C');
-  eprint('a');
-  eprint('u');
-  eprint('s');
-  eprint('e');
-  eprint(':');
-  eprint(' ');
-  eprint_num(a7);
-  eprint('\n');
-  eprint_num(cause);
-  eprint('\n');
+  {
+    char msg[] = "System call dispatcher: Cause: ";
+    eprint_str(msg);
+    eprint_num(a7);
+    eprint(';');
+    eprint_num(cause);
+    eprint('\n');
+  }
 #endif
 
   uint64_t result = syscall_handlers[a7](a0, a1, a2, a3, a4, a5);
 
 #if DEBUG_LEVEL > DEBUG_TRACE
-  eprint('R');
-  eprint('e');
-  eprint('s');
-  eprint('u');
-  eprint('l');
-  eprint('t');
-  eprint(':');
-  eprint(' ');
-  eprint_num(result);
-  eprint('\n');
+  {
+    char msg[] = "System call dispatcher: Result: ";
+    eprint_num(result);
+    eprint('\n');
+  }
 #endif
 
   return result;
