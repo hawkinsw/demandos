@@ -1,4 +1,8 @@
-## unibpform
+## FuzzOff
+
+A unikernel for fuzzing.[^riscv]
+
+[^riscv]: RISC-V-based programs, at this point!
 
 ### Compiling
 
@@ -17,7 +21,7 @@ $ cmake -DCMAKE_TOOLCHAIN_FILE=architecture.cmake -B build -S .
 ### Booting[^boot]
 
 ```console
-$ qemu-system-riscv64 -M virt -m 256 -nographic -bios /home/hawkinsw/code/riscv/opensbi/build/platform/generic/firmware/fw_jump.bin -kernel ./build/unibpform
+$ qemu-system-riscv64 -M virt -m 256 -nographic -bios <PATH TO OPENSBI BUILD>/fw_jump.bin -kernel ./build/fuzzoff
 ```
 
 If you want an [_entropy source_](), add 

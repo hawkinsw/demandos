@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(unibpform DESCRIPTION "A unikernel for eBPF programs.")
+project(fuzzoff DESCRIPTION "A unikernel for eBPF programs.")
 
 enable_language(ASM)
 
@@ -33,14 +33,12 @@ if(NOT DEBUG_LEVEL)
 	set(DEBUG_LEVEL 1)
 endif()
 
-add_executable(unibpform ${SRCS})
-target_compile_options(unibpform PRIVATE -mcmodel=large)
-target_include_directories(unibpform PRIVATE include)
+add_executable(fuzzoff ${SRCS})
+target_compile_options(fuzzoff PRIVATE -mcmodel=large)
+target_include_directories(fuzzoff PRIVATE include)
 set(ASM_OPTIONS "-x assembler-with-cpp")
-target_link_options(unibpform PRIVATE -static -T${CMAKE_SOURCE_DIR}/ld/standard.lds -mcmodel=large -mno-relax)
-#file(GENERATE OUTPUT ${CMAKE_SOURCE_DIR}/include INPUT ${CMAKE_SOURCE_DIR}/cmake/build_config.h)
+target_link_options(fuzzoff PRIVATE -static -T${CMAKE_SOURCE_DIR}/ld/standard.lds -mcmodel=large -mno-relax)
 configure_file(${CMAKE_SOURCE_DIR}/cmake/build_config.h ${CMAKE_SOURCE_DIR}/include )
-#add_dependencies(unibpform main_lib)
 
 
 add_executable(standalone-driver ${DRIVER_SRCS})
