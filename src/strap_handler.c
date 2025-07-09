@@ -22,6 +22,38 @@ syscall_handler syscall_handlers[300] = {
 
 };
 
+void timer_interrupt_handler(void) {
+  struct kernel_metadata *md = (struct kernel_metadata *)&_kernel_metadata;
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+  char msg[] = "Timer went off!\n";
+  eprint_str(msg);
+#endif
+
+  if (md->asleep.wakeup_time != 0) {
+#if DEBUG_LEVEL > DEBUG_TRACE
+    char msg[] = "There is something sleeping!\n";
+    eprint_str(msg);
+#endif
+
+    uint64_t stime = get_stime();
+
+    if (stime > md->asleep.wakeup_time) {
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+      char msg[] = "time to wake up!\n";
+      eprint_str(msg);
+#endif
+      md->asleep.should_wake = 1;
+      WRITE_FENCE();
+      set_stimecmp(-1);
+      WRITE_FENCE();
+      return;
+    }
+  }
+  set_stimecmp(get_stime() + 5 * 10e6);
+}
+
 uint64_t set_brk_s(uint64_t new_brk, uint64_t b, uint64_t c, uint64_t d,
                    uint64_t e, uint64_t f) {
   struct kernel_metadata *md = (struct kernel_metadata *)&_kernel_metadata;

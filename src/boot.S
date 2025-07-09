@@ -19,9 +19,6 @@ _boot:
 	la t0, _trap_dispatch
 	csrw stvec, t0
 
-	/* disable all interrupts. */
-	csrw sie, zero
-
 	/* Set the sp (sp) and esp (end of the stack)
 	 * based on what is in the linker script.
 	 */
@@ -57,9 +54,6 @@ clear_stack_loop:
 	// Turn off virtual memory.
 	csrw satp, zero
 
-	// Disable interrupts.
-	csrw sie, zero
-
 	la a0, _brk_start
 	call set_brk_s
 
@@ -71,6 +65,12 @@ clear_stack_loop:
 	// Tell the CPU that we want to jump back to u-mode.
 	li a0, 0x100
 	csrc sstatus, a0
+
+	// Enable interrupts
+	csrsi sstatus, 2
+
+	li t1, 32
+	csrs sie, t1
 
 	// And when we get there, start executing at _start.
 	la t0, _start
