@@ -34,28 +34,45 @@ void timer_interrupt_handler(void) {
   eprint_str(msg);
 #endif
 
-  if (md->asleep.wakeup_time != 0) {
+  uint64_t stime = get_stime();
+
+  // First, unset so that we don't get confused!
+  unset_stimecmp();
+  if (kernel->deferred.wakeup_time) {
+    // Second, check whether the kernel has deferred work to do!
+    if (stime > kernel->deferred.wakeup_time) {
+#if DEBUG_LEVEL > DEBUG_TRACE
+      char msg[] = "Trying to do some deferreds!\n";
+      eprint_str(msg);
+#endif
+      do_timer_deferreds(stime);
+    } else {
+      // Second (part two), make the kernel a cause of the wakeup!
+      set_stimecmp(kernel->deferred.wakeup_time);
+    }
+  }
+
+  // Third, check whether there is a process to wakeup!
+  if (current->asleep.wakeup_time != 0) {
 #if DEBUG_LEVEL > DEBUG_TRACE
     char msg[] = "There is something sleeping!\n";
     eprint_str(msg);
 #endif
 
-    uint64_t stime = get_stime();
-
-    if (stime > md->asleep.wakeup_time) {
-
+    // Third (part two), check whether the process needs to be woken up!
+    if (stime > current->asleep.wakeup_time) {
 #if DEBUG_LEVEL > DEBUG_TRACE
-      char msg[] = "time to wake up!\n";
+      char msg[] = "Time to wake up the currently sleeping process!\n";
       eprint_str(msg);
 #endif
-      md->asleep.should_wake = 1;
+      current->asleep.should_wake = 1;
       WRITE_FENCE();
-      set_stimecmp(-1);
-      WRITE_FENCE();
-      return;
+    } else {
+      // Still more sleeping to do! Try to make ourselves the next interrupt
+      // causer.
+      set_stimecmp(current->asleep.wakeup_time);
     }
   }
-  set_stimecmp(get_stime() + 5 * 10e6);
 }
 
 uint64_t set_brk_s(uint64_t new_brk, uint64_t b, uint64_t c, uint64_t d,
@@ -215,17 +232,21 @@ uint64_t nanosleep_s(uint64_t _clockid, uint64_t flags, uint64_t _duration_p,
 
   struct process *current = (struct process *)&_current;
 
-  md->asleep.wakeup_time =
+  current->asleep.wakeup_time =
       get_stime() + (duration->tv_sec * 10e6 + duration->tv_nsec);
 
-  set_stimecmp(md->asleep.wakeup_time);
+  set_stimecmp(current->asleep.wakeup_time);
 
   for (;;) {
     yield();
-    if (md->asleep.should_wake) {
+    READ_FENCE();
+    WRITE_FENCE();
+    if (current->asleep.should_wake) {
       break;
     }
+    // Keep reads/writes in order before going again!
     WRITE_FENCE();
+    READ_FENCE();
   }
   current->asleep.should_wake = 0;
   current->asleep.wakeup_time = 0;
@@ -367,7 +388,7 @@ void configure_syscall_handlers(void) {
   syscall_handlers[222] = empty;
   syscall_handlers[64] = write_s;
   syscall_handlers[96] = set_child_tid;
-  syscall_handlers[99] = empty;     // set_robust_list
+  syscall_handlers[99] = empty;      // set_robust_list
   syscall_handlers[93] = poweroff_s; // exit
   syscall_handlers[94] = poweroff_s; // exit
   syscall_handlers[214] = set_brk_s;

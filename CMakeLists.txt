@@ -26,6 +26,7 @@ set(SRCS
 	./src/blk.c
 	./src/runtime.c
 	./src/e.c
+	./src/os.c
 )
 
 
