@@ -87,4 +87,3 @@ clear_stack_loop:
 	
 	// Go!
 	sret
-
