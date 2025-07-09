@@ -8,7 +8,7 @@ struct sleep {
   uint64_t should_wake;
 };
 
-struct kernel_metadata {
+struct process {
   uint64_t brk;
   uint64_t set_child_tid;
   uint64_t clear_child_tid;

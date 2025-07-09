@@ -12,7 +12,8 @@
 
 #include "os.h"
 
-extern uint64_t _kernel_metadata;
+extern uint64_t _current;
+extern uint64_t _kernel;
 extern uint64_t _poweroff;
 extern uint64_t _gettime;
 
@@ -25,7 +26,8 @@ syscall_handler syscall_handlers[__NR_syscalls] = {
 };
 
 void timer_interrupt_handler(void) {
-  struct kernel_metadata *md = (struct kernel_metadata *)&_kernel_metadata;
+  struct process *current = (struct process *)&_current;
+  struct kernel *kernel = (struct kernel *)&_kernel;
 
 #if DEBUG_LEVEL > DEBUG_TRACE
   char msg[] = "Timer went off!\n";
@@ -58,7 +60,7 @@ void timer_interrupt_handler(void) {
 
 uint64_t set_brk_s(uint64_t new_brk, uint64_t b, uint64_t c, uint64_t d,
                    uint64_t e, uint64_t f) {
-  struct kernel_metadata *md = (struct kernel_metadata *)&_kernel_metadata;
+  struct process *md = (struct process *)&_current;
   if (new_brk != 0) {
     md->brk = new_brk;
   }
@@ -73,7 +75,7 @@ uint64_t hardware_riscv(uint64_t new_brk, uint64_t b, uint64_t c, uint64_t d,
 
 uint64_t set_child_tid(uint64_t tidptr, uint64_t b, uint64_t c, uint64_t d,
                        uint64_t e, uint64_t f) {
-  struct kernel_metadata *md = (struct kernel_metadata *)&_kernel_metadata;
+  struct process *md = (struct process *)&_current;
   md->clear_child_tid = tidptr;
   return 1;
 }
@@ -211,7 +213,7 @@ uint64_t nanosleep_s(uint64_t _clockid, uint64_t flags, uint64_t _duration_p,
   }
 #endif
 
-  struct kernel_metadata *md = (struct kernel_metadata *)&_kernel_metadata;
+  struct process *current = (struct process *)&_current;
 
   md->asleep.wakeup_time =
       get_stime() + (duration->tv_sec * 10e6 + duration->tv_nsec);
@@ -225,8 +227,8 @@ uint64_t nanosleep_s(uint64_t _clockid, uint64_t flags, uint64_t _duration_p,
     }
     WRITE_FENCE();
   }
-  md->asleep.should_wake = 0;
-  md->asleep.wakeup_time = 0;
+  current->asleep.should_wake = 0;
+  current->asleep.wakeup_time = 0;
 
   return 0;
 }
