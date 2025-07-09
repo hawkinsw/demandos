@@ -18,7 +18,6 @@ set(SRCS
 	./src/smemory.c
 	./src/strap.S
 	./src/strap_handler.c
-	./src/system.S
 	./src/system.c
 	./src/pci.c
 	./src/util.c

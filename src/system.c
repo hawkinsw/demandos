@@ -21,3 +21,15 @@ void yield() {
   asm("csrsi sstatus, 0\n");
   WRITE_FENCE();
 }
+
+void sys_poweroff() {
+  asm("mv a0, zero\n"
+      "mv a1, zero\n"
+      "mv a7, zero\n"
+      "li a7, 0x53525354\n"
+      "mv a6, zero\n"
+      "ecall\n"
+      :
+      :
+      : "a0", "a1", "a7", "a6");
+}

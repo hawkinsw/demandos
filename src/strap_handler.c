@@ -230,6 +230,8 @@ uint64_t nanosleep_s(uint64_t _clockid, uint64_t flags, uint64_t _duration_p,
   current->asleep.should_wake = 0;
   current->asleep.wakeup_time = 0;
 
+  epoweroff();
+
   return 0;
 }
 
@@ -338,12 +340,11 @@ uint64_t poweroff_s(uint64_t _fd, uint64_t _op, uint64_t c, uint64_t d,
 
 uint64_t unimplemented(uint64_t a, uint64_t b, uint64_t c, uint64_t d,
                        uint64_t e, uint64_t f) {
-  void (*system_poweroff)() = (void (*)())&_poweroff;
 #if DEBUG_LEVEL > DEBUG_ERROR
   char unimplemented[] = "Unimplemented";
   eprint_str(unimplemented);
 #endif
-  system_poweroff();
+  sys_poweroff();
   __builtin_unreachable();
 }
 

@@ -9,5 +9,6 @@
 void set_stimecmp(uint64_t future);
 uint64_t get_stime();
 void yield();
+void sys_poweroff();
 
 #endif

@@ -1,10 +1,10 @@
+#include "build_config.h"
 #include "ecall.h"
+#include "system.h"
 #include <asm-generic/unistd.h>
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
-
-extern uint64_t _poweroff;
 
 void eprint(uint64_t p) {
   register uint64_t a7 asm("a7") = 1;
@@ -13,8 +13,13 @@ void eprint(uint64_t p) {
 }
 
 uint64_t epoweroff() {
-  void (*system_poweroff)() = (void (*)())&_poweroff;
-  system_poweroff();
+#if DEBUG_LEVEL > DEBUG_TRACE
+  {
+    char msg[] = "Powering off ...\n";
+    eprint_str(msg);
+  }
+#endif
+  sys_poweroff();
   __builtin_unreachable();
 }
 
