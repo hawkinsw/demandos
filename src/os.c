@@ -1,6 +1,5 @@
 #include "os.h"
 #include "build_config.h"
-#include "ecall.h"
 #include "system.h"
 
 struct process _current;
