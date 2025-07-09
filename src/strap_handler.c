@@ -2,8 +2,10 @@
 #include "e.h"
 #include "ecall.h"
 #include "io.h"
+#include "system.h"
 #include "util.h"
 #include "virtio.h"
+#include <asm-generic/unistd.h>
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
@@ -17,7 +19,7 @@ extern uint64_t _gettime;
 typedef uint64_t (*syscall_handler)(uint64_t, uint64_t, uint64_t, uint64_t,
                                     uint64_t, uint64_t);
 
-syscall_handler syscall_handlers[300] = {
+syscall_handler syscall_handlers[__NR_syscalls] = {
     NULL,
 
 };
@@ -195,6 +197,40 @@ uint64_t write_s(uint64_t _fd, uint64_t _buf, uint64_t _size, uint64_t d,
   return fds[fd].write_handler(fd, buf, size);
 }
 
+uint64_t nanosleep_s(uint64_t _clockid, uint64_t flags, uint64_t _duration_p,
+                     uint64_t _rem_p, uint64_t e, uint64_t f) {
+
+  struct timespec *duration = (struct timespec *)_duration_p;
+  // If interrupted, write remainder here!
+  struct timespec *rem = (struct timespec *)_rem_p;
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+  {
+    char msg[] = "In nanosleep\n";
+    eprint_str(msg);
+  }
+#endif
+
+  struct kernel_metadata *md = (struct kernel_metadata *)&_kernel_metadata;
+
+  md->asleep.wakeup_time =
+      get_stime() + (duration->tv_sec * 10e6 + duration->tv_nsec);
+
+  set_stimecmp(md->asleep.wakeup_time);
+
+  for (;;) {
+    yield();
+    if (md->asleep.should_wake) {
+      break;
+    }
+    WRITE_FENCE();
+  }
+  md->asleep.should_wake = 0;
+  md->asleep.wakeup_time = 0;
+
+  return 0;
+}
+
 uint64_t empty(uint64_t new_brk, uint64_t b, uint64_t c, uint64_t d, uint64_t e,
                uint64_t f) {
   return 0;
@@ -343,6 +379,7 @@ void configure_syscall_handlers(void) {
   syscall_handlers[56] = openat_s;
   syscall_handlers[63] = read_s;
   syscall_handlers[62] = seek_s;
+  syscall_handlers[115] = nanosleep_s;
 }
 
 uint64_t system_call_dispatcher(uint64_t cause, uint64_t location,
