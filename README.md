@@ -1,6 +1,6 @@
 ## FuzzOff
 
-A unikernel for fuzzing.[^riscv]
+An on-demand unikernel.[^riscv]
 
 [^riscv]: RISC-V-based programs, at this point!
 

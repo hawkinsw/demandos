@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(fuzzoff DESCRIPTION "A unikernel for eBPF programs.")
+project(demandos DESCRIPTION "A unikernel for eBPF programs.")
 
 enable_language(ASM)
 
@@ -25,7 +25,8 @@ set(SRCS
 	./src/virtio.c
 	./src/virtio_driver.c
 	./src/blk.c
-	${FS_TEST_DRIVER_SRCS}
+	./src/runtime.c
+	./src/e.c
 )
 
 
@@ -33,19 +34,17 @@ if(NOT DEBUG_LEVEL)
 	set(DEBUG_LEVEL 1)
 endif()
 
-add_executable(fuzzoff ${SRCS})
-target_compile_options(fuzzoff PRIVATE -mcmodel=large)
-target_include_directories(fuzzoff PRIVATE include)
+add_executable(demandos ${SRCS})
+target_compile_options(demandos PRIVATE -mcmodel=large)
+target_include_directories(demandos PRIVATE include)
 set(ASM_OPTIONS "-x assembler-with-cpp")
-target_link_options(fuzzoff PRIVATE -static -T${CMAKE_SOURCE_DIR}/ld/standard.lds -mcmodel=large -mno-relax)
+target_link_options(demandos PRIVATE -static -T${CMAKE_SOURCE_DIR}/ld/standard.lds -mcmodel=large -mno-relax)
 configure_file(${CMAKE_SOURCE_DIR}/cmake/build_config.h ${CMAKE_SOURCE_DIR}/include )
-
 
 add_executable(standalone-driver ${DRIVER_SRCS})
 target_compile_options(standalone-driver PRIVATE -mcmodel=large)
 target_include_directories(standalone-driver PRIVATE include)
 target_link_options(standalone-driver PRIVATE -static)
-
 
 # Targets for manipulating the testing environment.
 
