@@ -3,14 +3,13 @@
 .global _boot
 _boot:
 
-	mv tp, a0
-	mv s1, a1
 
-	.option push
-	.option norelax
+	// TODO: Investigate further the gp!
+	//.option push
+	//.option norelax
 	//la gp, __global_pointer$
-	mv gp, zero
-	.option pop
+	//mv gp, zero
+	//.option pop
 
 	/* set up the interrupts table. */
 	//la t0, _isr_table
@@ -59,16 +58,43 @@ clear_stack_loop:
 
 	call configure_pci
 	call configure_io
-	
 	call configure_syscall_handlers
+
+	// Set up values on the stack that _start (from glibc)
+	// will use to kick off the program!
+	// See
+	// - sysdeps/unix/sysv/linux/dl-parse_auxv.h
+	// - sysdeps/riscv/start.S
+	// for more information.
+	//
+	// argc goes at the top of the stack.
+	li t2, 1
+	sd t2, 0(sp)
+	// argv is inline on the stack starting at the second stack entry.
+	la t2, _pgm
+	sd t2, 8(sp)
+	sd zero, 16(sp) // signify the end of argv
+	sd zero, 24(sp) // signify the start/end of envp
+
+
+	// TODO: Turn this into a loop by copying something that is better written in C.
+	// Now, there need to be an array of auxv_t entries!
+
+	// One of those entries needs to tell the loader where to find some random bytes!
+	li t2, 25
+	sd t2, 32(sp)
+	la t2, dl_random_bytes
+	sd t2, 40(sp)
+
+	// End of stack setup for _start.
 
 	// Tell the CPU that we want to jump back to u-mode.
 	li a0, 0x100
 	csrc sstatus, a0
 
-	// Enable interrupts
-	csrsi sstatus, 2
-
+	// Disable interrupts until we really want them!
+	csrci sstatus, 2
+	// When we ask for interrupts, we would like timer interrupts.
 	li t1, 32
 	csrs sie, t1
 

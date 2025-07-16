@@ -27,6 +27,7 @@ set(SRCS
 	./src/runtime.c
 	./src/e.c
 	./src/os.c
+	./src/argcv.c
 )
 
 
