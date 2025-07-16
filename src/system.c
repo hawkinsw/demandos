@@ -1,6 +1,5 @@
 #include "system.h"
 #include "build_config.h"
-#include "ecall.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -11,7 +10,8 @@ volatile uint64_t shadow_stime = (uint64_t)-1;
 
 void set_stimecmp(uint64_t future) {
   // TODO: This should queue what is not immediately set!
-  if (future != STIME_UNSET && shadow_stime != STIME_UNSET && shadow_stime < future) {
+  if (future != STIME_UNSET && shadow_stime != STIME_UNSET &&
+      shadow_stime < future) {
     // Do not make someone else miss their deadline.
 #if DEBUG_LEVEL > DEBUG_TRACE
     {
@@ -24,10 +24,10 @@ void set_stimecmp(uint64_t future) {
   }
 
 #if DEBUG_LEVEL > DEBUG_TRACE
-    {
-      char msg[] = "Setting timecmp.\n";
-      eprint_str(msg);
-    }
+  {
+    char msg[] = "Setting timecmp.\n";
+    eprint_str(msg);
+  }
 #endif
 
   shadow_stime = future;
