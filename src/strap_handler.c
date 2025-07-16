@@ -31,15 +31,18 @@ void timer_interrupt_handler(void) {
   struct process *current = (struct process *)&_current;
   struct kernel *kernel = (struct kernel *)&_kernel;
 
-#if DEBUG_LEVEL > DEBUG_TRACE
-  char msg[] = "Timer went off!\n";
-  eprint_str(msg);
-#endif
-
   uint64_t stime = get_stime();
 
-  // First, unset so that we don't get confused!
+  // First (even before loggin!), unset so that we don't get confused!
   unset_stimecmp();
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+{
+  char msg[] = "Timer went off!\n";
+  eprint_str(msg);
+}
+#endif
+
   if (kernel->deferred.wakeup_time) {
     // Second, check whether the kernel has deferred work to do!
     if (stime > kernel->deferred.wakeup_time) {
