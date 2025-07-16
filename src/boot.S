@@ -59,6 +59,7 @@ clear_stack_loop:
 	call configure_pci
 	call configure_io
 	call configure_syscall_handlers
+	call configure_dl_random
 
 	// Set up values on the stack that _start (from glibc)
 	// will use to kick off the program!

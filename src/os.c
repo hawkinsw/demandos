@@ -35,3 +35,25 @@ void do_timer_deferreds(uint64_t now) {
     kernel->deferred.wakeup_time = 0;
   }
 }
+
+void yield() {
+  asm("csrsi sstatus, 2\n");
+  // Consider whether using wfi here is better?
+  // asm("wfi\n");
+  WRITE_FENCE();
+  asm("csrci sstatus, 0\n");
+  WRITE_FENCE();
+}
+
+void configure_dl_random() {
+
+  uint64_t randomness = 0x0;
+
+  if (virtio_get_randomness(&randomness, sizeof(uint64_t)) != 8) {
+    char msg[] = "Error occurred configuring dl_random.\n";
+    eprint_str(msg);
+    epoweroff();
+  }
+
+  dl_random_bytes = randomness;
+}
