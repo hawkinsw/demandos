@@ -2,6 +2,7 @@
 #include "e.h"
 #include "ecall.h"
 #include "io.h"
+#include "runtime.h"
 #include "system.h"
 #include "util.h"
 #include "virtio.h"
@@ -10,6 +11,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "event.h"
 #include "os.h"
 
 extern uint64_t _current;
@@ -174,6 +176,51 @@ uint64_t write_s(uint64_t _fd, uint64_t _buf, uint64_t _size, uint64_t d,
     return -1;
   }
   return fds[fd].write_handler(fd, buf, size);
+}
+
+uint64_t demand_s(uint64_t _timeout, uint64_t _event_p, uint64_t c, uint64_t d,
+                  uint64_t e, uint64_t f) {
+  struct event *event = (struct event *)_event_p;
+  uint64_t timeout = _timeout;
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+  char msg[] = "Beginning to wait for a demand ...!\n";
+  eprint_str(msg);
+#endif
+
+  timeout = get_stime() + timeout;
+  // First, set the timeout!
+
+  set_stimecmp(timeout);
+
+  // Now, race the timeout for an event!
+
+  for (;;) {
+    yield();
+    READ_FENCE();
+    WRITE_FENCE();
+
+    if (get_stime() > (timeout + 3e7)) {
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+      {
+        char msg[] = "Done waiting for a demand ... time out!!\n";
+        eprint_str(msg);
+      }
+#endif
+      return WAIT_TIMEOUT;
+    }
+  }
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+  {
+    char msg[] = "Done waiting for a demand ... an event occurred!!\n";
+    eprint_str(msg);
+  }
+#endif
+
+  //set_stimecmp(get_stime() + 5 * 1e7);
+  return WAIT_EVENT_OCCURRED;
 }
 
 uint64_t nanosleep_s(uint64_t _clockid, uint64_t flags, uint64_t _duration_p,
@@ -364,6 +411,9 @@ void configure_syscall_handlers(void) {
   syscall_handlers[63] = read_s;
   syscall_handlers[62] = seek_s;
   syscall_handlers[115] = nanosleep_s;
+
+  // Non-standard system call so that the runtime can ask for the next Demand.
+  syscall_handlers[209] = demand_s;
 }
 
 uint64_t system_call_dispatcher(uint64_t cause, uint64_t location,
