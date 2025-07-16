@@ -152,3 +152,58 @@ void virtio_device_set_status(void *virtio_host_cfg, uint8_t status) {
   *device_status_p = status;
   WRITE_FENCE();
 }
+
+// If virtio_get_randomness is called early in the boot process,
+// stdlib's memcpy might not yet be available.
+void early_memcpy(uint8_t *dest, uint8_t *src, size_t amt) {
+  for (size_t i = 0; i<amt; i++) {
+    *dest++ = *src++;
+  }
+}
+
+uint64_t virtio_get_randomness(void *buffer, uint64_t length) {
+#define CHUNK_SIZE 8
+  const size_t chunk_size = CHUNK_SIZE;
+  uint8_t buf[CHUNK_SIZE] = {
+      0x0,
+  };
+
+  struct virtio_driver *driver = find_virtio_driver(5);
+
+  if (!driver || !driver->initialized) {
+    return -1;
+  }
+
+  uint16_t next = driver->vring->bookeeping.descr_next;
+
+  for (size_t filled = 0; filled < length; filled += chunk_size) {
+    uint32_t just_used = next;
+    next = vring_add_to_descr(driver->vring, (void *)buf, chunk_size, 2, next,
+                              true);
+
+    vring_use_avail(&driver->vring[0], just_used);
+    signal_virtio_device(driver, 0);
+    vring_wait_completion(&driver->vring[0]);
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+    {
+      char msg[] = "Randomness retrieved: ";
+      eprint_str(msg);
+      for (int i = 0; i < chunk_size; i++) {
+        eprint_num(buf[i]);
+        eprint(',');
+      }
+      eprint('\n');
+    }
+#endif
+
+    size_t amt_to_copy = chunk_size;
+    if (length - filled < chunk_size) {
+      amt_to_copy = length - filled;
+    }
+    // Cannot use memcpy because it might not be available.
+
+    early_memcpy(buffer + filled, buf, amt_to_copy);
+  }
+  return length;
+}

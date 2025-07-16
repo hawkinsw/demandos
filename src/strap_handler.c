@@ -120,50 +120,10 @@ uint64_t get_random_s(uint64_t _buffer, uint64_t /* size_t */ _length,
                       uint64_t f) {
   void *buffer = (void *)_buffer;
   size_t length = (size_t)_length;
+
   // TODO: Handle flags!
 
-#define CHUNK_SIZE 8
-  const size_t chunk_size = CHUNK_SIZE;
-  uint8_t buf[CHUNK_SIZE] = {
-      0x0,
-  };
-
-  struct virtio_driver *driver = find_virtio_driver(5);
-
-  if (!driver || !driver->initialized) {
-    return -1;
-  }
-
-  uint16_t next = driver->vring->bookeeping.descr_next;
-
-  for (size_t filled = 0; filled < length; filled += chunk_size) {
-    uint32_t just_used = next;
-    next = vring_add_to_descr(driver->vring, (void *)buf, chunk_size, 2, next,
-                              true);
-
-    vring_use_avail(&driver->vring[0], just_used);
-    signal_virtio_device(driver, 0);
-    vring_wait_completion(&driver->vring[0]);
-
-#if DEBUG_LEVEL > DEBUG_TRACE
-    {
-      char msg[] = "Randomness retrieved: ";
-      eprint_str(msg);
-      for (int i = 0; i < chunk_size; i++) {
-        eprint_num(buf[i]);
-        eprint(',');
-      }
-      eprint('\n');
-    }
-#endif
-
-    size_t amt_to_copy = chunk_size;
-    if (length - filled < chunk_size) {
-      amt_to_copy = length - filled;
-    }
-    memcpy(buffer + filled, buf, amt_to_copy);
-  }
-  return length;
+  return virtio_get_randomness(buffer, length);
 }
 
 uint64_t openat_s(uint64_t _dirfd, uint64_t _pathname, uint64_t _flags,

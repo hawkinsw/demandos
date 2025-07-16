@@ -116,4 +116,6 @@ void virtio_device_set_status(void *virtio_host_cfg, uint8_t status);
 #define MAX_VIRTIO_DEVICE_ID 10
 extern struct virtio_driver virtio_drivers[MAX_VIRTIO_DEVICE_ID];
 
+uint64_t virtio_get_randomness(void *buffer, uint64_t length);
+
 #endif
