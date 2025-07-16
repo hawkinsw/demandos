@@ -9,6 +9,8 @@ void set_deferred(uint64_t when, at_time_deferred_t deferred, void *cookie);
 
 void do_timer_deferreds(uint64_t now);
 
+void yield();
+
 struct sleep {
   uint64_t wakeup_time;
   uint64_t should_wake;

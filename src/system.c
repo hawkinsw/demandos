@@ -46,13 +46,6 @@ static uint64_t read_stime() {
 
 uint64_t get_stime() { return read_stime(); }
 
-void yield() {
-  asm("csrsi sstatus, 2\n");
-  WRITE_FENCE();
-  asm("csrsi sstatus, 0\n");
-  WRITE_FENCE();
-}
-
 void sys_poweroff() {
   asm("mv a0, zero\n"
       "mv a1, zero\n"
