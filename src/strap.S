@@ -104,9 +104,14 @@ _trap_dispatch:
 	
 	// Find out the address of the exception.
 	ld t1,  33 * 8(sp)
+
+	li t6, 0x8
+	ld t5,  32 * 8(sp) // get the stored scause.
+	bne t5, t6, skip_sepc_adjust
 	// Don't return right there ... return to
 	// the next one!
 	addi t1, t1, 4
+skip_sepc_adjust:
 	csrw sepc, t1
 
 	ld x1,   1 * 8(sp)
@@ -120,6 +125,10 @@ _trap_dispatch:
 	ld x9,   9 * 8(sp)
 	// Do not overwrite a0
 	// or a1
+	beq t5, t6, skip_return_value_restore
+	ld x10,   10 * 8(sp)
+	ld x11,   11 * 8(sp)
+skip_return_value_restore:
 	ld x12, 12 * 8(sp)
 	ld x13, 13 * 8(sp)
 	ld x14, 14 * 8(sp)
