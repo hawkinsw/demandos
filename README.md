@@ -72,7 +72,7 @@ will pretty print the device tree in the file `qemu.dtb`. See above for generati
 
 ### Block Devices
 
-To create a qcow2 block device:
+#### To create a qcow2 image:
 
 ```console
 $ qemu-img create -f qcow2 <NAME> <SIZE>
@@ -86,6 +86,8 @@ $ qemu-img create -f qcow2 simple.qcow2 512B
 
 (or use the make-simple-qcow2 CMake target).
 
+#### Inspecting the contents of a qcow2 image:
+
 To read the raw contents of a qcow2 disk image, use `qemu-img`'s `dd` subcommand (which works much like `dd`). For example,
 
 ```console
@@ -96,4 +98,29 @@ will read the entirety of `simple.qcow2` and write it to `simple.qcow2.dd`. _Tha
 
 ```console
 $ hexdump -C simple.qcow2.dd
+```
+
+#### Making an image that contains a filesystem for testing:
+
+Using ext2 as an example (on a device with 1MB of raw capacity).
+
+1. Create a raw file:
+```console
+$ dd if=/dev/zero of=formatted.raw bs=1K count=1024
+```
+2. Create a loopback device with that raw file as the backing:
+```console
+$ losetup -f formatted.raw
+```
+3. Make the filesystem:
+```console
+$ mkfs.ext2 /dev/loop0
+```
+4. Detach the loopback device:
+```console
+$ losetup -d loop0
+```
+5. Convert it to a qcow2:
+```console
+$ qemu-img convert -f raw -O qcow2 formatted.raw formatted.qcow2
 ```
