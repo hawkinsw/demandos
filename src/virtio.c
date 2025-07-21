@@ -1,4 +1,5 @@
 #include "virtio.h"
+#include "demandos.h"
 #include "build_config.h"
 #include "smemory.h"
 #include "system.h"
@@ -155,7 +156,7 @@ void virtio_device_set_status(void *virtio_host_cfg, uint8_t status) {
 
 // If virtio_get_randomness is called early in the boot process,
 // stdlib's memcpy might not yet be available.
-void early_memcpy(uint8_t *dest, uint8_t *src, size_t amt) {
+void DEMANDOS_INTERNAL(memcpy)(uint8_t *dest, uint8_t *src, size_t amt) {
   for (size_t i = 0; i<amt; i++) {
     *dest++ = *src++;
   }
@@ -203,7 +204,7 @@ uint64_t virtio_get_randomness(void *buffer, uint64_t length) {
     }
     // Cannot use memcpy because it might not be available.
 
-    early_memcpy(buffer + filled, buf, amt_to_copy);
+    DEMANDOS_INTERNAL(memcpy)(buffer + filled, buf, amt_to_copy);
   }
   return length;
 }
