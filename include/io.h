@@ -21,4 +21,6 @@ bool is_fd_open(uint64_t fd);
 
 int open_fd(char *pathname);
 
+uint64_t io_mount_hd();
+
 #endif
