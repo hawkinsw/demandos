@@ -27,11 +27,16 @@
  .quad 0
  .quad system_call_dispatcher
 
-.text
-	.align 6
-	.global _trap_dispatch
-_trap_dispatch:
-	addi sp, sp, -43 * 8
+
+.macro allocate_stack size:req
+	addi sp, sp, -1 * (\size)
+.endm
+
+.macro deallocate_stack size:req
+	addi sp, sp, (\size)
+.endm
+
+.macro push_registers
 	sd x1,   1 * 8(sp)
 	sd x2,   2 * 8(sp)
 	sd x3,   3 * 8(sp)
@@ -63,13 +68,36 @@ _trap_dispatch:
 	sd x29, 29 * 8(sp)
 	sd x30, 30 * 8(sp)
 	sd x31, 31 * 8(sp)
+.endm
 
-	csrr t0, scause
-	sd t0,  32 * 8(sp)
-	csrr t1, sepc
-	sd t1,  33 * 8(sp)
-	csrr t2, stval
-	sd t2,  34 * 8(sp)
+.macro get_push_trap_registers scause:req, sepc:req, stval:req
+	csrr \scause, scause
+	sd \scause,  32 * 8(sp)
+	csrr \sepc, sepc
+	sd \sepc,  33 * 8(sp)
+	csrr \stval, stval
+	sd \stval,  34 * 8(sp)
+.endm
+
+.macro load_trap_handler_address into:req, trap: req
+	// There is a jump table to the actual handler.
+	la \into, _trap_handlers
+	// Each entry is 8 bytes long. Multiply the cause by 8.
+	// Assume it is valid.
+	slli \trap, \trap, 3
+	// Compute the address of the address of the handler.
+	add \into, \into, \trap
+	// Load the address of the handler.
+	ld  \into, 0(\into)
+.endm
+
+.text
+	.align 6
+	.global _trap_dispatch
+_trap_dispatch:
+	allocate_stack size=(43*8)
+	push_registers
+	get_push_trap_registers scause=t0 sepc=t1 stval=t2
 
 	sd a7,  35 * 8(sp) // user cause
 	sd a0,  36 * 8(sp) // system call arguments
@@ -80,15 +108,7 @@ _trap_dispatch:
 	sd a5,  41 * 8(sp) // system call arguments
 	sd sp,  42 * 8(sp) // system call arguments
 
-	// There is a jump table to the actual handler.
-	la t6, _trap_handlers
-	// Each entry is 8 bytes long. Multiply the cause by 8.
-	// Assume it is valid.
-	slli t0, t0, 3
-	// Compute the address of the address of the handler.
-	add t6, t6, t0 
-	// Load the address of the handler.
-	ld  t6, 0(t6)
+	load_trap_handler_address into=t6 trap=t0
 
 	//ld a0,  32 * 8(sp) // cause
 	csrr a0,  sstatus
@@ -149,5 +169,6 @@ skip_return_value_restore:
 	ld x29, 29 * 8(sp)
 	ld x30, 30 * 8(sp)
 	ld x31, 31 * 8(sp)
-	addi sp, sp, 43 * 8
+
+	deallocate_stack size=(43*8)
 	sret
