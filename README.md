@@ -124,3 +124,14 @@ $ losetup -d loop0
 ```console
 $ qemu-img convert -f raw -O qcow2 formatted.raw formatted.qcow2
 ```
+
+### Documentation
+
+| Component | Document | Link |
+| -- | -- | -- |
+| FS Driver | | |
+| | "The Second Extended File System" | [Link](https://www.nongnu.org/ext2-doc/ext2.html) |
+| External Clock | | |
+| | Goldfish Timer | [Link](https://nuttx.apache.org/docs/latest/platforms/arm/goldfish/goldfish_timer.html) |
+| Virtio | | |
+| |  Virtual I/O Device (VIRTIO) Version 1.1  | [Link](https://docs.oasis-open.org/virtio/virtio/v1.1/cs01/virtio-v1.1-cs01.html)
