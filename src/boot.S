@@ -56,6 +56,8 @@ clear_stack_loop:
 	la a0, _brk_start
 	call set_brk_s
 
+	call initialize_heap
+
 	call configure_pci
 	call configure_io
 	call configure_syscall_handlers

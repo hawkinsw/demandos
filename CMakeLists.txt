@@ -28,6 +28,7 @@ set(SRCS
 	./src/e.c
 	./src/os.c
 	./src/argcv.c
+	./src/memory.c
 )
 
 

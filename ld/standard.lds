@@ -13,7 +13,7 @@ MEMORY
 }
 MEMORY
 {
-	bss_data(rw) : ORIGIN = 0x8ef02000, LENGTH = 31M
+	bss_data(rw) : ORIGIN = 0x80300000, LENGTH = 100M
 }
 
 SECTIONS
@@ -289,8 +289,16 @@ SECTIONS
 		. = ALIGN(4096);
   } > bss_data
 
-  . = ALIGN(4096);
-  _brk_start = .;
+  .heap : {
+    . = ALIGN(4096);
+    _heap_start = .;
+    . += 1024 * 1024 * 24;
+    . = ALIGN(4096);
+    _heap_end = .;
+
+    . = ALIGN(4096);
+    _brk_start = .;
+  } > bss_data
   
 }
 
