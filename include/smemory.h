@@ -7,6 +7,5 @@
     ((start + align - 1) & ( ~(align - 1) ))
 
 void *salign(size_t size, size_t align);
-void *smalloc(size_t size);
 
 #endif
