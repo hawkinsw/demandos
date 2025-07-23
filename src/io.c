@@ -5,7 +5,10 @@
 #include "ext2.h"
 #include "virtio.h"
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
+
+#include "e.h"
 
 // We currently support no more than 100 open file descriptors.
 struct io_descriptor fds[100] = {};
@@ -157,6 +160,106 @@ int open_fd(char *pathname) {
   return fd;
 }
 
+#define INODE_TABLE_LOC(ino, inode_per_group) ((ino - 1) / inode_per_group)
+#define INODE_LOC_IN_TABLE(ino, inode_per_group) ((ino - 1) % inode_per_group)
+
+bool inode_from_ino(struct virtio_driver *driver, struct ext2_inode *rinode,
+                    uint32_t ino, uint32_t ino_per_group,
+                    uint32_t blocks_per_group, uint64_t block_size) {
+  uint32_t inode_table_block_group = INODE_TABLE_LOC(ino, ino_per_group);
+  uint32_t inode_table_index = INODE_LOC_IN_TABLE(ino, ino_per_group);
+
+  uint8_t buffer[512] = {
+      0,
+  };
+
+  // Calculate the sector for the _primary_ block group containing the inode
+  // table that contains this inode (got that?)!
+  uint64_t inode_table_block_group_sector = sector_from_pos(
+      1024 + 1024 + (inode_table_block_group * block_size * blocks_per_group));
+  uint64_t inode_table_block_group_sector_offset = sector_offset_from_pos(
+      1024 + 1024 + (inode_table_block_group * block_size * blocks_per_group));
+
+  // Read in the block group.
+  struct ext2_blockgroup bg;
+  uint8_t result =
+      virtio_blk_read_sync(driver, inode_table_block_group_sector, buffer);
+  memcpy(&bg, buffer + inode_table_block_group_sector_offset,
+         sizeof(struct ext2_blockgroup));
+
+  // Read in the inode contents.
+  uint64_t inode_table_entry_position =
+      bg.bg_inode_table * block_size +
+      inode_table_index * sizeof(struct ext2_inode);
+  uint64_t inode_table_entry_sector =
+      sector_from_pos(inode_table_entry_position);
+  uint64_t inode_table_entry_sector_offset =
+      sector_offset_from_pos(inode_table_entry_position);
+
+  result = virtio_blk_read_sync(driver, inode_table_entry_sector, buffer);
+  memcpy(rinode, buffer + inode_table_entry_sector_offset,
+         sizeof(struct ext2_inode));
+
+  return true;
+}
+
+void debug_dirent(struct virtio_driver *driver, struct ext2_inode *inode,
+                  uint64_t block_size) {
+  char buffer[512];
+
+  uint64_t block0_position = inode->i_block[0] * block_size;
+  uint64_t block0_sector = sector_from_pos(inode->i_block[0] * block_size);
+
+  uint64_t result = virtio_blk_read_sync(driver, block0_sector, buffer);
+
+  // Copy the raw contents of the directory entry into a dirent.
+  struct ext2_dirent de;
+  memcpy(&de, buffer, sizeof(struct ext2_dirent));
+
+#if 1
+  if (de.inode == 0x2) {
+    char here[] = "Wow\n";
+    eprint_str(here);
+
+    memcpy(&de, buffer, de.rec_len);
+    char filename[255] = {
+        0,
+    };
+    memcpy(filename, de.name, de.name_len);
+    eprint_str(filename);
+    eprint('\n');
+
+    uint32_t previous_de_len = de.rec_len;
+
+    memcpy(&de, buffer + previous_de_len, sizeof(struct ext2_dirent));
+    memcpy(&de, buffer + previous_de_len, de.rec_len);
+    previous_de_len += de.rec_len;
+
+    memcpy(&de, buffer + previous_de_len, sizeof(struct ext2_dirent));
+    memcpy(&de, buffer + previous_de_len, de.rec_len);
+    previous_de_len += de.rec_len;
+
+    memset(filename, 0, sizeof(filename));
+    memcpy(filename, de.name, de.name_len);
+    eprint_str(filename);
+    eprint('\n');
+
+    memcpy(&de, buffer + previous_de_len, sizeof(struct ext2_dirent));
+    memcpy(&de, buffer + previous_de_len, de.rec_len);
+
+    memset(filename, 0, sizeof(filename));
+    memcpy(filename, de.name, de.name_len);
+    eprint_str(filename);
+    eprint('\n');
+  }
+#endif
+
+  epoweroff();
+
+  // Assume there are fewer than XXX inodes per table.
+  // 1. Read the inode table
+}
+
 uint64_t io_mount_hd() {
   struct ext2_superblock superblock = {.s_blocks_count = 0,
                                        .s_inodes_count = 0};
@@ -197,7 +300,7 @@ uint64_t io_mount_hd() {
   // Copy the raw data over to the superblock.
   memcpy(&superblock, buffer, sizeof(struct ext2_superblock));
 
-#if 0
+#if 1
   if (superblock.s_blocks_count == 0x400) {
     char here[] = "Read the proper number of blocks!\n";
     eprint_str(here);
@@ -216,7 +319,7 @@ uint64_t io_mount_hd() {
 
   uint64_t actual_block_size = 1024 << superblock.s_log_block_size;
 
-#if 0
+#if 1
   if (actual_block_size == 1024) {
     char here[] = "Read the proper block size!\n";
     eprint_str(here);
@@ -250,11 +353,10 @@ uint64_t io_mount_hd() {
   struct ext2_blockgroup bg;
   memcpy(&bg, buffer, sizeof(struct ext2_blockgroup));
 
-#if 0
+#if 1
   if (bg.bg_block_bitmap == 0x6) {
     char here[] = "Read the proper block bitmap id!\n";
     eprint_str(here);
-
   }
 
   if (bg.bg_inode_bitmap == 0x7) {
@@ -275,7 +377,8 @@ uint64_t io_mount_hd() {
   }
 
   {
-    // In the first block, should be 117 (because 117 + 11 (reserved) == 128 (inodes per block!))
+    // In the first block, should be 117 (because 117 + 11 (reserved) == 128
+    // (inodes per block!))
     char here[] = "Free inodes? ";
     eprint_str(here);
     eprint_num(bg.bg_free_inodes_count);
@@ -306,33 +409,10 @@ uint64_t io_mount_hd() {
   struct ext2_dirent de;
   memcpy(&de, buffer, sizeof(struct ext2_dirent));
 
-#if 0
-  if (de.inode == 0x2) {
-    char here[] = "Wow\n";
-    eprint_str(here);
+  struct ext2_inode ino;
+  inode_from_ino(driver, &ino, 2, superblock.s_inodes_per_group,
+                 superblock.s_blocks_per_group, 1024);
 
-    memcpy(&de, buffer, de.rec_len);
-    char filename[255] = {0,};
-    memcpy(filename, de.name, de.name_len);
-    eprint_str(filename);
-    eprint('\n');
-
-    uint32_t previous_de_len = de.rec_len;
-
-
-    memcpy(&de, buffer + previous_de_len, sizeof(struct ext2_dirent));
-    memcpy(&de, buffer + previous_de_len, de.rec_len);
-    previous_de_len += de.rec_len;
-
-    memcpy(&de, buffer + previous_de_len, sizeof(struct ext2_dirent));
-    memcpy(&de, buffer + previous_de_len, de.rec_len);
-
-    memset(filename, 0, sizeof(filename));
-    memcpy(filename, de.name, de.name_len);
-    eprint_str(filename);
-    eprint('\n');
-  }
-#endif
-
+  debug_dirent(driver, &ino, actual_block_size);
   return 0;
 }
