@@ -1,7 +1,8 @@
 #include "build_config.h"
+#include "demandos.h"
+#include "memory.h"
 #include "ecall.h"
 #include "pci.h"
-#include "smemory.h"
 #include "system.h"
 #include "virtio.h"
 #include <stdbool.h>
@@ -70,7 +71,7 @@ bool init_entropy_virtio(struct virtio_driver *driver, void *pci_device,
 #endif
 
   // Allocate a single vring.
-  driver->vring = smalloc(sizeof(struct vring));
+  driver->vring = DEMANDOS_INTERNAL(malloc)(sizeof(struct vring));
 
   vring_init(driver->vring, 8);
 
@@ -144,7 +145,7 @@ bool init_blk_virtio(struct virtio_driver *driver, void *pci_device,
   eprint('\n');
 #endif
 
-  driver->vring = (struct vring *)smalloc(sizeof(struct vring));
+  driver->vring = (struct vring *)DEMANDOS_INTERNAL(malloc)(sizeof(struct vring));
   vring_init(&driver->vring[0], 256);
 
   // Write the address of the virtq descr.
@@ -203,7 +204,7 @@ bool init_console_virtio(struct virtio_driver *driver, void *pci_device,
 
   // Allocate space for 2 vrings
 
-  driver->vring = (struct vring *)smalloc(sizeof(struct vring) * 2);
+  driver->vring = (struct vring *)DEMANDOS_INTERNAL(malloc)(sizeof(struct vring) * 2);
   vring_init(&driver->vring[0], 128);
   vring_init(&driver->vring[1], 128);
 
