@@ -1,6 +1,6 @@
 #include "virtio.h"
-#include "demandos.h"
 #include "build_config.h"
+#include "demandos.h"
 #include "smemory.h"
 #include "system.h"
 #include <stdbool.h>
@@ -129,27 +129,32 @@ void vring_init(struct vring *vring, size_t qsz) {
 
 void virtio_device_queue_select(void *virtio_host_cfg, uint16_t q) {
   // Select the virtio q #1.
-  uint16_t *virtio_q_sel_p = (uint16_t *)(virtio_host_cfg + VIRTIO_Q_SELECT_HOST_CFG_OFFSET);
+  uint16_t *virtio_q_sel_p =
+      (uint16_t *)(virtio_host_cfg + VIRTIO_Q_SELECT_HOST_CFG_OFFSET);
   *virtio_q_sel_p = q;
   WRITE_FENCE();
 }
 
 uint16_t virtio_device_queue_size_read(void *virtio_host_cfg) {
   // Read the queue size.
-  uint16_t *virtio_q_len_p = (uint16_t *)(virtio_host_cfg + VIRTIO_Q_SIZE_HOST_CFG_OFFSET); //
+  uint16_t *virtio_q_len_p =
+      (uint16_t *)(virtio_host_cfg + VIRTIO_Q_SIZE_HOST_CFG_OFFSET); //
   uint16_t virtio_q_len = *virtio_q_len_p;
   WRITE_FENCE();
   return virtio_q_len;
 }
-uint16_t virtio_device_queue_desc_write(void *virtio_host_cfg, struct vring_desc_item *descr) {
+uint16_t virtio_device_queue_desc_write(void *virtio_host_cfg,
+                                        struct vring_desc_item *descr) {
   // Write the address of the virtq descr.
-  uint32_t *descr_conf_addr = (uint32_t *)(virtio_host_cfg + VIRTIO_Q_ADDR_HOST_CFG_OFFSET);
+  uint32_t *descr_conf_addr =
+      (uint32_t *)(virtio_host_cfg + VIRTIO_Q_ADDR_HOST_CFG_OFFSET);
   *descr_conf_addr = ((uint64_t)descr) >> VIRTIO_Q_ADDR_PAGE_SHIFT;
   WRITE_FENCE();
 }
 
 void virtio_device_set_status(void *virtio_host_cfg, uint8_t status) {
-  uint8_t *device_status_p = (uint8_t *)(virtio_host_cfg + VIRTIO_DEVICE_STATUS_HOST_CFG_OFFSET);
+  uint8_t *device_status_p =
+      (uint8_t *)(virtio_host_cfg + VIRTIO_DEVICE_STATUS_HOST_CFG_OFFSET);
   *device_status_p = status;
   WRITE_FENCE();
 }
@@ -157,7 +162,7 @@ void virtio_device_set_status(void *virtio_host_cfg, uint8_t status) {
 // If virtio_get_randomness is called early in the boot process,
 // stdlib's memcpy might not yet be available.
 void DEMANDOS_INTERNAL(memcpy)(uint8_t *dest, uint8_t *src, size_t amt) {
-  for (size_t i = 0; i<amt; i++) {
+  for (size_t i = 0; i < amt; i++) {
     *dest++ = *src++;
   }
 }

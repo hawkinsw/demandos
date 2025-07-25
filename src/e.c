@@ -56,7 +56,8 @@ void eprint_strn(char *str, size_t n) {
 
 void eprint_buffer(char *msg, uint8_t *buffer, size_t size) {
   eprint_str(msg);
-  eprint(':'); eprint('\n');
+  eprint(':');
+  eprint('\n');
 
   for (int i = 0; i < size; i++) {
     eprint_num(buffer[i]);
