@@ -2,6 +2,8 @@
 #define _EXT2_H
 
 #include <stdint.h>
+#include <stdbool.h>
+#include "virtio.h"
 
 struct __attribute__((packed)) ext2_superblock {
   uint32_t s_inodes_count;
@@ -61,4 +63,13 @@ struct __attribute__((packed)) ext2_dirent {
     uint8_t  name[];
 };
 
+bool inode_from_ino(struct virtio_driver *driver, struct ext2_inode *rinode,
+                    uint32_t ino, uint32_t ino_per_group,
+                    uint32_t blocks_per_group, uint64_t block_size);
+
+bool bg_from_bgno(struct virtio_driver *driver, struct ext2_blockgroup *rbg,
+                  uint32_t bgno);
+
+void debug_dirent(struct virtio_driver *driver, struct ext2_inode *inode,
+                  uint64_t block_size);
 #endif

@@ -23,4 +23,8 @@ int open_fd(char *pathname);
 
 uint64_t io_mount_hd();
 
+uint64_t sector_from_pos(uint64_t pos);
+
+uint64_t sector_offset_from_pos(uint64_t pos);
+
 #endif

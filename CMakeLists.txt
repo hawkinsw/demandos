@@ -29,6 +29,7 @@ set(SRCS
 	./src/os.c
 	./src/argcv.c
 	./src/memory.c
+	./src/ext2.c
 )
 
 
