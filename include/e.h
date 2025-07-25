@@ -14,4 +14,6 @@ void eprint_str(char *str);
 
 void eprint_strn(char *str, size_t n);
 
+void eprint_buffer(char *msg, uint8_t *buffer, size_t size);
+
 #endif
