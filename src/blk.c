@@ -1,7 +1,9 @@
 #include "blk.h"
+#include "io.h"
 #include "virtio.h"
 
 #include <byteswap.h>
+#include <string.h>
 
 uint8_t virtio_blk_write_sync(struct virtio_driver *driver, uint64_t sector,
                               void *addr) {
@@ -40,8 +42,8 @@ uint8_t virtio_blk_write_sync(struct virtio_driver *driver, uint64_t sector,
   return blk_io_status;
 }
 
-uint8_t virtio_blk_read_sync(struct virtio_driver *driver, uint64_t sector,
-                             void *addr) {
+uint8_t virtio_blk_read_sector_sync(struct virtio_driver *driver,
+                                    uint64_t sector, void *addr) {
 
   uint8_t blk_io_status = 0xff;
   struct virtio_blk_req_hdr blk_read_hdr;
@@ -75,4 +77,37 @@ uint8_t virtio_blk_read_sync(struct virtio_driver *driver, uint64_t sector,
   vring_wait_completion(vring);
 
   return blk_io_status;
+}
+
+#define MIN(x, y) ((x < y) ? x : y)
+size_t virtio_blk_read_sync(struct virtio_driver *driver, uint8_t *output,
+                             uint64_t offset, size_t size) {
+  size_t read_amt = 0, last_read_amt = 0;
+  for (read_amt = 0; read_amt < size; read_amt += last_read_amt) {
+    char blk[VIRTIO_BLK_SIZE] = {
+        0,
+    };
+    uint8_t read_result = virtio_blk_read_sector_sync(
+        driver, sector_from_pos(offset + read_amt), blk);
+    // If the latest read did not get what we wanted, then assume
+    // that nothing came back. Tell the caller only about what we know was good.
+    if (read_result) {
+        return read_amt;
+    }
+
+    // Copy what was read.
+    // Example: Want 1118 bytes.
+    // Second read: min((1118 - (512), VIRTIO_BLK_SIZE)
+    // Second read: min((606        ), VIRTIO_BLK_SIZE)
+    // Second read: 512
+    // Last read:   min(1118 - (512 + 512)), VIRTIO_BLK_SIZE)
+    // Last read:   min(1118 - (1024     )), VIRTIO_BLK_SIZE)
+    // Last read:   min(94                ), VIRTIO_BLK_SIZE1)
+    // Last read:   min(94                ), VIRTIO_BLK_SIZE1)
+    // Last read:   94
+    last_read_amt = MIN((size - read_amt),VIRTIO_BLK_SIZE);
+    memcpy(output + read_amt, blk, last_read_amt);
+  }
+
+  return read_amt;
 }

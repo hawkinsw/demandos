@@ -21,6 +21,10 @@ struct virtio_blk_sg_hdr {
 
 #define VIRTIO_BLK_SIZE 512
 
-uint8_t virtio_blk_write_sync(struct virtio_driver *driver, uint64_t sector, void *addr);
-uint8_t virtio_blk_read_sync(struct virtio_driver *driver, uint64_t sector, void *addr);
+uint8_t virtio_blk_write_sync(struct virtio_driver *driver, uint64_t sector,
+                              void *addr);
+uint8_t virtio_blk_read_sector_sync(struct virtio_driver *driver,
+                                    uint64_t sector, void *addr);
+size_t virtio_blk_read_sync(struct virtio_driver *driver, uint8_t *output,
+                            uint64_t offset, size_t size);
 #endif
