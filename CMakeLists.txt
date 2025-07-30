@@ -37,6 +37,12 @@ if(NOT DEBUG_LEVEL)
 	set(DEBUG_LEVEL 1)
 endif()
 
+if(ENABLE_TESTS)
+	set(ENABLE_TESTS 1)
+else()
+	set(ENABLE_TESTS 0)
+endif()
+
 add_executable(demandos ${SRCS})
 target_compile_options(demandos PRIVATE -mcmodel=large)
 target_include_directories(demandos PRIVATE include)
