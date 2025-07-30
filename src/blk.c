@@ -81,7 +81,7 @@ uint8_t virtio_blk_read_sector_sync(struct virtio_driver *driver,
 
 #define MIN(x, y) ((x < y) ? x : y)
 size_t virtio_blk_read_sync(struct virtio_driver *driver, uint8_t *output,
-                             uint64_t offset, size_t size) {
+                            uint64_t offset, size_t size) {
   size_t read_amt = 0, last_read_amt = 0;
   for (read_amt = 0; read_amt < size; read_amt += last_read_amt) {
     char blk[VIRTIO_BLK_SIZE] = {
@@ -92,7 +92,7 @@ size_t virtio_blk_read_sync(struct virtio_driver *driver, uint8_t *output,
     // If the latest read did not get what we wanted, then assume
     // that nothing came back. Tell the caller only about what we know was good.
     if (read_result) {
-        return read_amt;
+      return read_amt;
     }
 
     // Copy what was read.
@@ -105,7 +105,7 @@ size_t virtio_blk_read_sync(struct virtio_driver *driver, uint8_t *output,
     // Last read:   min(94                ), VIRTIO_BLK_SIZE1)
     // Last read:   min(94                ), VIRTIO_BLK_SIZE1)
     // Last read:   94
-    last_read_amt = MIN((size - read_amt),VIRTIO_BLK_SIZE);
+    last_read_amt = MIN((size - read_amt), VIRTIO_BLK_SIZE);
     memcpy(output + read_amt, blk, last_read_amt);
   }
 

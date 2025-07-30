@@ -144,7 +144,8 @@ bool inode_from_dir(struct virtio_driver *driver,
     // TODO: Refactor to handle dynamic block sizes.
     while (dirent_idx < 1024) {
 
-      // First, get the part of the directory entry that we _know_ has to be there.
+      // First, get the part of the directory entry that we _know_ has to be
+      // there.
       memcpy(de, buffer + dirent_idx, sizeof(struct ext2_dirent));
       // Then, use that information to determine what else needs to be copied.
       memcpy(de, buffer + dirent_idx, de->rec_len);
@@ -273,7 +274,7 @@ bool read_superblock(struct virtio_driver *driver,
 
 #if ENABLE_TESTS
 bool test_ext2_implementation(struct virtio_driver *driver,
-                                  struct ext2_superblock *superblock) {
+                              struct ext2_superblock *superblock) {
 
   char buffer[1024] = {
       0,
@@ -300,7 +301,6 @@ bool test_ext2_implementation(struct virtio_driver *driver,
   } else {
     eprint_str("Failure to read the proper block bitmap id.\n");
     epoweroff();
-
   }
 
   if (bg->bg_inode_bitmap == 0x7) {
@@ -309,7 +309,6 @@ bool test_ext2_implementation(struct virtio_driver *driver,
   } else {
     eprint_str("Failure to read the proper inode bitmap id.\n");
     epoweroff();
-
   }
 
   if (bg->bg_inode_table == 0x8) {
