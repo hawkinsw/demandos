@@ -32,6 +32,10 @@ set(SRCS
 	./src/ext2.c
 )
 
+set(FORMATTABLE_FILES "${SRCS}")
+list(FILTER FORMATTABLE_FILES EXCLUDE REGEX ".*.S$")
+list(TRANSFORM FORMATTABLE_FILES PREPEND "${CMAKE_SOURCE_DIR}/" OUTPUT_VARIABLE FORMATTABLE_FILES)
+list(JOIN FORMATTABLE_FILES "\n" FORMATTABLE_FILES)
 
 if(NOT DEBUG_LEVEL)
 	set(DEBUG_LEVEL 1)
@@ -59,3 +63,6 @@ target_link_options(standalone-driver PRIVATE -static)
 
 # Create a simple qcow2 image for testing:
 add_custom_target(make-simple-qcow2 qemu-img "create" "-f" "qcow2" "${CMAKE_SOURCE_DIR}/test/fs/simple.qcow2" "512B")
+
+file(GENERATE OUTPUT ${CMAKE_SOURCE_DIR}/cicd/clang-format-configure CONTENT "${FORMATTABLE_FILES}")
+add_custom_target(clang-format COMMAND ${CMAKE_SOURCE_DIR}/cicd/format.sh "${CMAKE_SOURCE_DIR}/cicd/clang-format-configure")
