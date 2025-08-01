@@ -84,8 +84,7 @@ bool read_superblock(struct virtio_driver *driver,
                      struct ext2_superblock *superblock);
 
 #if ENABLE_TESTS
-bool test_ext2_implementation(struct virtio_driver *driver,
-                                  struct ext2_superblock *superblock);
+bool test_ext2_implementation();
 #endif
 
 bool ino_from_path(struct virtio_driver *driver,
@@ -94,4 +93,13 @@ bool ino_from_path(struct virtio_driver *driver,
 size_t read_from_ino(struct virtio_driver *driver,
                      struct ext2_superblock *superblock, uint32_t ino,
                      char *buffer, size_t offset, size_t len);
+bool inode_from_dir(struct virtio_driver *driver,
+                    struct ext2_superblock *superblock, char *path,
+                    struct ext2_inode *dir, struct ext2_inode *inode, uint32_t *ino);
+bool inode_from_path(struct virtio_driver *driver,
+                     struct ext2_superblock *superblock, char *path,
+                     struct ext2_inode *inode);
+bool ext2_read_block(struct virtio_driver *driver,
+                struct ext2_superblock *superblock, uint32_t block_no,
+                char *buffer);
 #endif

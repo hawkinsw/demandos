@@ -121,9 +121,59 @@ void debug_dirent(struct virtio_driver *driver,
   }
 }
 
+bool ino_from_path(struct virtio_driver *driver,
+                   struct ext2_superblock *superblock, char *path,
+                   uint32_t *ino) {
+  char *strtok_ctx = NULL;
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+  {
+    char msg[] = "Looking for the ino for the path ";
+    eprint_str(msg);
+    eprint_str(path);
+    eprint('\n');
+  }
+#endif
+
+  struct ext2_inode traverse_inode;
+  // As the path is traversed, inode has the contents of the CWD.
+  if (!inode_from_ino(driver, superblock, &traverse_inode, 2)) {
+    return false;
+  }
+  for (strtok_ctx = path; /* Odd for loop. */; strtok_ctx = NULL) {
+
+    char *next = strtok(strtok_ctx, "/");
+
+    if (next == NULL) {
+      break;
+    }
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+    {
+      char msg[] = "We found part of the path: ";
+      eprint_str(msg);
+      eprint_str(next);
+      eprint('\n');
+    }
+#endif
+
+    struct ext2_inode current_directory;
+    memcpy(&current_directory, &traverse_inode, sizeof(struct ext2_inode));
+
+    // If we cannot find the current part of the path, then too bad.
+    if (!inode_from_dir(driver, superblock, next, &current_directory,
+                        &traverse_inode, ino)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool inode_from_dir(struct virtio_driver *driver,
                     struct ext2_superblock *superblock, char *path,
-                    struct ext2_inode *dir, struct ext2_inode *inode) {
+                    struct ext2_inode *dir, struct ext2_inode *inode,
+                    uint32_t *ino) {
   for (size_t o = 0; o < EXT2_MAX_DIRECT_BLOCKS_PER_INODE; o++) {
     if (dir->i_block[o] == 0) {
       break;
@@ -164,6 +214,9 @@ bool inode_from_dir(struct virtio_driver *driver,
 #endif
 
       if (!strncmp(de->name, path, de->name_len)) {
+        if (ino != NULL) {
+          *ino = de->inode;
+        }
         return inode_from_ino(driver, superblock, inode, de->inode);
       }
       dirent_idx += de->rec_len;
@@ -211,7 +264,8 @@ bool inode_from_path(struct virtio_driver *driver,
     memcpy(&current_directory, inode, sizeof(struct ext2_inode));
 
     // If we cannot find the current part of the path, then too bad.
-    if (!inode_from_dir(driver, superblock, next, &current_directory, inode)) {
+    if (!inode_from_dir(driver, superblock, next, &current_directory, inode,
+                        NULL)) {
       return false;
     }
   }
@@ -281,19 +335,21 @@ bool read_superblock(struct virtio_driver *driver,
   return true;
 }
 
-#if ENABLE_TESTS
-bool test_ext2_implementation(struct virtio_driver *driver,
-                              struct ext2_superblock *superblock) {
+bool test_ext2_implementation() {
+  struct ext2_superblock superblock;
+  struct virtio_driver *driver = find_virtio_driver(1);
+
+  read_superblock(driver, &superblock);
 
   char buffer[1024] = {
       0,
   };
 
-  uint64_t actual_block_size = 1024 << superblock->s_log_block_size;
+  uint64_t actual_block_size = 1024 << superblock.s_log_block_size;
   uint64_t actual_block_group_sizes =
-      actual_block_size * superblock->s_blocks_per_group;
+      actual_block_size * superblock.s_blocks_per_group;
   uint32_t block_group_count =
-      superblock->s_blocks_count / superblock->s_blocks_per_group;
+      superblock.s_blocks_count / superblock.s_blocks_per_group;
 
   // Read the first (primary copy of the) block group.
   uint8_t result = virtio_blk_read_sector_sync(
@@ -347,10 +403,10 @@ bool test_ext2_implementation(struct virtio_driver *driver,
   // Copy the raw contents of the _second_ entry in the inode table into an
   // inode and log the contents.
   struct ext2_inode ino;
-  inode_from_ino(driver, superblock, &ino, 2);
-  debug_dirent(driver, superblock, &ino);
+  inode_from_ino(driver, &superblock, &ino, 2);
+  debug_dirent(driver, &superblock, &ino);
 
-  inode_from_path(driver, superblock, "/blank", &ino);
+  inode_from_path(driver, &superblock, "/blank", &ino);
   result = virtio_blk_read_sector_sync(
       driver, sector_from_pos(ino.i_block[0] * actual_block_size), buffer);
   eprint_buffer("Contents of block 0 of blank file", buffer, 512);
@@ -361,7 +417,7 @@ bool test_ext2_implementation(struct virtio_driver *driver,
     epoweroff();
   }
 
-  inode_from_path(driver, superblock, "/eve", &ino);
+  inode_from_path(driver, &superblock, "/eve", &ino);
   result = virtio_blk_read_sector_sync(
       driver, sector_from_pos(ino.i_block[0] * actual_block_size), buffer);
   eprint_buffer("Contents of block 0 of eve file", buffer, 512);
@@ -370,6 +426,16 @@ bool test_ext2_implementation(struct virtio_driver *driver,
   } else {
     eprint_str("Failure to read proper contents of /eve (as 'adam')");
     epoweroff();
+  }
+
+  struct ext2_inode path_inode;
+  if (!inode_from_path(driver, &superblock, "/this/is/a/test", &path_inode)) {
+    char msg[] = "Could not get the inode for the /this/is/a/test path.\n";
+    eprint_str(msg);
+    epoweroff();
+  } else {
+    char msg[] = "Successfully got the inode for the /this/is/a/test path.\n";
+    eprint_str(msg);
   }
 
   return true;
