@@ -107,7 +107,7 @@ int disk_read_handler(uint64_t fd, void *buf, size_t size) {
 #endif
 
   struct ext2_superblock *superb = superblock_for_ino(iod->ino);
-  return read_from_ino(driver, superb , iod->ino, buf, iod->pos, size);
+  return read_from_ino(driver, superb, iod->ino, buf, iod->pos, size);
 }
 
 int disk_seek_handler(uint64_t fd, long int off, int whence) {
