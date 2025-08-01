@@ -195,6 +195,19 @@ uint64_t internal_unit_test_s(uint64_t a, uint64_t b, uint64_t c, uint64_t d,
   return 0;
 }
 
+uint64_t mount_hd_s(uint64_t _timeout, uint64_t _event_p, uint64_t c,
+                    uint64_t d, uint64_t e, uint64_t f) {
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+  char msg[] = "About to mount the hard drive...!\n";
+  eprint_str(msg);
+#endif
+
+  DEMANDOS_INTERNAL(malloc)(500);
+
+  return io_mount_hd();
+}
+
 uint64_t demand_s(uint64_t _timeout, uint64_t _event_p, uint64_t c, uint64_t d,
                   uint64_t e, uint64_t f) {
   struct event *event = (struct event *)_event_p;
@@ -431,6 +444,7 @@ void configure_syscall_handlers(void) {
 
   // Non-standard system call so that the runtime can ask for the next Demand.
   syscall_handlers[209] = demand_s;
+  syscall_handlers[210] = mount_hd_s;
   syscall_handlers[211] = internal_unit_test_s;
 }
 
