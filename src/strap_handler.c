@@ -1,4 +1,10 @@
+#include <asm-generic/unistd.h>
+#include <stdint.h>
+#include <string.h>
+#include <time.h>
+
 #include "build_config.h"
+#include "demandos.h"
 #include "e.h"
 #include "ecall.h"
 #include "io.h"
@@ -6,12 +12,10 @@
 #include "system.h"
 #include "util.h"
 #include "virtio.h"
-#include <asm-generic/unistd.h>
-#include <stdint.h>
-#include <string.h>
-#include <time.h>
 
 #include "event.h"
+#include "ext2.h"
+#include "memory.h"
 #include "os.h"
 
 extern uint64_t _current;
@@ -179,6 +183,16 @@ uint64_t write_s(uint64_t _fd, uint64_t _buf, uint64_t _size, uint64_t d,
     return -1;
   }
   return fds[fd].write_handler(fd, buf, size);
+}
+
+uint64_t internal_unit_test_s(uint64_t a, uint64_t b, uint64_t c, uint64_t d,
+                              uint64_t e, uint64_t f) {
+#if ENABLE_TESTS
+  eprint_str("Running internal unit tests ...\n");
+  test_ext2_implementation();
+#endif
+
+  return 0;
 }
 
 uint64_t demand_s(uint64_t _timeout, uint64_t _event_p, uint64_t c, uint64_t d,
@@ -417,6 +431,7 @@ void configure_syscall_handlers(void) {
 
   // Non-standard system call so that the runtime can ask for the next Demand.
   syscall_handlers[209] = demand_s;
+  syscall_handlers[211] = internal_unit_test_s;
 }
 
 uint64_t system_call_dispatcher(uint64_t cause, uint64_t location,

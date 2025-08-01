@@ -24,12 +24,19 @@ set(SRCS
 	./src/virtio.c
 	./src/virtio_driver.c
 	./src/blk.c
-	./src/runtime.c
 	./src/e.c
 	./src/os.c
 	./src/argcv.c
 	./src/memory.c
 	./src/ext2.c
+)
+
+set(RUNTIME_SRCS 
+	./src/runtime.c
+)
+
+set(TEST_SRCS 
+	./test/unit_test.c
 )
 
 set(FORMATTABLE_FILES "${SRCS}")
@@ -47,12 +54,18 @@ else()
 	set(ENABLE_TESTS 0)
 endif()
 
-add_executable(demandos ${SRCS})
+add_executable(demandos ${SRCS} ${RUNTIME_SRCS})
 target_compile_options(demandos PRIVATE -mcmodel=large)
 target_include_directories(demandos PRIVATE include)
 set(ASM_OPTIONS "-x assembler-with-cpp")
 target_link_options(demandos PRIVATE -static -T${CMAKE_SOURCE_DIR}/ld/standard.lds -mcmodel=large -mno-relax)
 configure_file(${CMAKE_SOURCE_DIR}/cmake/build_config.h ${CMAKE_SOURCE_DIR}/include )
+
+add_executable(demandos-test ${SRCS} ${TEST_SRCS})
+target_compile_options(demandos-test PRIVATE -mcmodel=large)
+target_include_directories(demandos-test PRIVATE include)
+set(ASM_OPTIONS "-x assembler-with-cpp")
+target_link_options(demandos-test PRIVATE -static -T${CMAKE_SOURCE_DIR}/ld/standard.lds -mcmodel=large -mno-relax)
 
 add_executable(standalone-driver ${DRIVER_SRCS})
 target_compile_options(standalone-driver PRIVATE -mcmodel=large)
