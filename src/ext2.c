@@ -219,6 +219,15 @@ bool inode_from_path(struct virtio_driver *driver,
   return true;
 }
 
+bool ext2_read_block(struct virtio_driver *driver,
+                     struct ext2_superblock *superblock, uint32_t block_no,
+                     char *buffer) {
+  size_t result =
+      virtio_blk_read_sync(driver, buffer, block_no * EXT2_SUPPORTED_BLOCK_SIZE,
+                           EXT2_SUPPORTED_BLOCK_SIZE);
+  return result == EXT2_SUPPORTED_BLOCK_SIZE;
+}
+
 bool read_superblock(struct virtio_driver *driver,
                      struct ext2_superblock *superblock) {
 
@@ -365,4 +374,34 @@ bool test_ext2_implementation(struct virtio_driver *driver,
 
   return true;
 }
+
+size_t read_from_ino(struct virtio_driver *driver,
+                     struct ext2_superblock *superblock, uint32_t ino,
+                     char *buffer, size_t offset, size_t len) {
+  char block_buffer[EXT2_SUPPORTED_BLOCK_SIZE];
+  struct ext2_inode inode;
+
+  bool found_inode = inode_from_ino(driver, superblock, &inode, ino);
+  if (!found_inode) {
+    return (size_t)-1;
+  }
+
+  size_t block_list_offset = offset / EXT2_SUPPORTED_BLOCK_SIZE;
+  size_t caller_buffer_offset = offset % EXT2_SUPPORTED_BLOCK_SIZE;
+
+  size_t read_result = ext2_read_block(
+      driver, superblock, inode.i_block[block_list_offset], block_buffer);
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+  eprint_str("Read from offset ");
+  eprint_num(offset);
+  eprint_str(" from inode #");
+  eprint_num(ino);
+  eprint_buffer(" and got data", (uint8_t *)block_buffer,
+                EXT2_SUPPORTED_BLOCK_SIZE);
 #endif
+
+  memcpy(buffer, block_buffer + caller_buffer_offset, len);
+
+  return 1;
+}

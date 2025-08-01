@@ -11,6 +11,7 @@ typedef int(*seek_handler_t)(uint64_t fd, long int off, int whence);
 struct io_descriptor {
     bool open;
     uint64_t pos;
+    uint32_t ino;
     write_handler_t write_handler;
     read_handler_t read_handler;
     seek_handler_t seek_handler;
@@ -26,5 +27,8 @@ uint64_t io_mount_hd();
 uint64_t sector_from_pos(uint64_t pos);
 
 uint64_t sector_offset_from_pos(uint64_t pos);
+
+struct ext2_superblock *superblock_for_pathname(char *pathname);
+struct ext2_superblock *superblock_for_ino(uint32_t ino);
 
 #endif

@@ -4,9 +4,11 @@
 #include "ecall.h"
 #include "ext2.h"
 #include "virtio.h"
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "e.h"
 
@@ -104,7 +106,8 @@ int disk_read_handler(uint64_t fd, void *buf, size_t size) {
   eprint('\n');
 #endif
 
-  return size;
+  struct ext2_superblock *superb = superblock_for_ino(iod->ino);
+  return read_from_ino(driver, superb , iod->ino, buf, iod->pos, size);
 }
 
 int disk_seek_handler(uint64_t fd, long int off, int whence) {
@@ -145,13 +148,47 @@ void configure_io() {
   }
 }
 
+static struct ext2_superblock _superblock;
+static bool _superblock_mounted = false;
+
+struct ext2_superblock *superblock_for_ino(uint32_t ino) {
+  return &_superblock;
+}
+
+struct ext2_superblock *superblock_for_pathname(char *pathname) {
+  return &_superblock;
+}
+
 int open_fd(char *pathname) {
+  struct virtio_driver *driver = find_virtio_driver(1);
+  if (!driver || !driver->initialized) {
+    return -1;
+  }
+
   uint64_t fd = next_fd++;
 
   fds[fd].open = true;
   fds[fd].write_handler = disk_write_handler;
   fds[fd].read_handler = disk_read_handler;
   fds[fd].seek_handler = disk_seek_handler;
+
+  if (!_superblock_mounted) {
+    eprint_str("Superblock is not mounted.\n");
+    assert(_superblock_mounted);
+  }
+
+  struct ext2_superblock *superblock = superblock_for_pathname(pathname);
+
+  bool ino_found = ino_from_path(driver, superblock, pathname, &fds[fd].ino);
+
+  if (!ino_found) {
+    eprint_str("Could not find the inode.");
+    assert(_superblock_mounted);
+  }
+
+  eprint_str("Found the inode (");
+  eprint_num(fds[fd].ino);
+  eprint('\n');
 
   return fd;
 }
@@ -161,8 +198,8 @@ int open_fd(char *pathname) {
 // Handle variable block size (etc).
 
 uint64_t io_mount_hd() {
-  struct ext2_superblock superblock = {.s_blocks_count = 0,
-                                       .s_inodes_count = 0};
+  _superblock.s_blocks_count = 0;
+  _superblock.s_inodes_count = 0;
 
   struct virtio_driver *driver = find_virtio_driver(1);
 
@@ -170,7 +207,7 @@ uint64_t io_mount_hd() {
     return -1;
   }
 
-  bool superblock_read_result = read_superblock(driver, &superblock);
+  bool superblock_read_result = read_superblock(driver, &_superblock);
 
   // TODO: Make function for reading superblock.
 
@@ -178,27 +215,14 @@ uint64_t io_mount_hd() {
       0,
   };
 
-  uint64_t actual_block_size = 1024 << superblock.s_log_block_size;
+  uint64_t actual_block_size = 1024 << _superblock.s_log_block_size;
   uint64_t actual_block_group_sizes =
-      actual_block_size * superblock.s_blocks_per_group;
+      actual_block_size * _superblock.s_blocks_per_group;
 
   uint32_t block_group_count =
-      superblock.s_blocks_count / superblock.s_blocks_per_group;
+      _superblock.s_blocks_count / _superblock.s_blocks_per_group;
+  _superblock_mounted = true;
 
-#if ENABLE_TESTS
-  test_ext2_implementation(driver, &superblock);
-#endif
-
-  struct ext2_inode path_inode;
-  if (!inode_from_path(driver, &superblock, "/this/is/a/test", &path_inode)) {
-    char msg[] = "Could not get the inode for the /this/is/a/test path.\n";
-    eprint_str(msg);
-  } else {
-    char msg[] = "Woah: ";
-    eprint_str(msg);
-    eprint_num(path_inode.i_size);
-    eprint('\n');
-  }
   return 0;
 }
 
