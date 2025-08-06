@@ -96,6 +96,8 @@ size_t virtio_blk_read_sync(struct virtio_driver *driver, uint8_t *output,
       return read_amt;
     }
 
+    size_t size_of_content_in_sector = (VIRTIO_BLK_SIZE - sector_offset);
+
     // Copy what was read.
     // Example: Want 1118 bytes.
     // Second read: min((1118 - (512), VIRTIO_BLK_SIZE)
