@@ -77,6 +77,8 @@ bool init_entropy_virtio(struct virtio_driver *driver, void *pci_device,
 
   vring_init(driver->vring, 8);
 
+  driver->vring->num = virtio_q_len;
+
   // Write the address of the virtq descr.
   virtio_device_queue_desc_write(host_configuration_regs, driver->vring->desc);
 
@@ -151,6 +153,8 @@ bool init_blk_virtio(struct virtio_driver *driver, void *pci_device,
   driver->vring =
       (struct vring *)DEMANDOS_INTERNAL(malloc)(sizeof(struct vring));
   vring_init(&driver->vring[0], 256);
+
+  driver->vring->num = virtio_q_len;
 
   // Write the address of the virtq descr.
   virtio_device_queue_desc_write(host_configuration_regs,

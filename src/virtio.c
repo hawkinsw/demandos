@@ -1,6 +1,7 @@
 #include "virtio.h"
 #include "build_config.h"
 #include "demandos.h"
+#include "ecall.h"
 #include "smemory.h"
 #include "system.h"
 #include <stdbool.h>
@@ -12,13 +13,13 @@ struct blk_config {
 };
 
 uint16_t vring_next_descr(struct vring *vring) {
-  return vring->bookeeping.descr_next;
+  return vring->bookeeping.descr_next % (vring->num - 1);
 }
 
 uint16_t vring_add_to_descr(struct vring *vring, void *buf, uint32_t size,
                             uint16_t flags, uint32_t where, bool ends_chain) {
 
-  uint32_t next = (vring->bookeeping.descr_next + 1) % vring->size;
+  uint32_t next = (vring->bookeeping.descr_next + 1) % (vring->num - 1);
 
   vring->desc[where].addr = (uint64_t)buf;
   vring->desc[where].len = size;
