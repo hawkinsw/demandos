@@ -117,6 +117,10 @@ size_t virtio_blk_read_sync(struct virtio_driver *driver, uint8_t *output,
   return read_amt;
 }
 
-uint64_t virtio_blk_sector_from_pos(uint64_t pos) { return pos / VIRTIO_BLK_SIZE; }
+uint64_t virtio_blk_sector_from_pos(uint64_t pos) {
+  return pos / VIRTIO_BLK_SIZE;
+}
 
-uint64_t virtio_blk_sector_offset_from_pos(uint64_t pos) { return pos % VIRTIO_BLK_SIZE; }
+uint64_t virtio_blk_sector_offset_from_pos(uint64_t pos) {
+  return pos % VIRTIO_BLK_SIZE;
+}

@@ -82,15 +82,17 @@ int main() {
     return 1;
   }
   char random1_expected[] = {0x4c, 0x5a, 0xbf, 0x19, 0x00, 0xa4, 0xd1};
-  char random1_actual[8] = {0, };
+  char random1_actual[8] = {
+      0,
+  };
   read(fd2, random1_actual, 7);
   if (memcmp(random1_actual, random1_expected, 7)) {
     printf("Error reading from file (actual: ");
-    for (size_t s = 0; s<8; s++) {
+    for (size_t s = 0; s < 8; s++) {
       printf("0x%02x ", random1_actual[s]);
     }
     printf(" vs expected: ");
-    for (size_t s = 0; s<8; s++) {
+    for (size_t s = 0; s < 8; s++) {
       printf("0x%02x ", random1_expected[s]);
     }
     printf(")\n");

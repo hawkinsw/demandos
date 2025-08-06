@@ -16,17 +16,19 @@ bool bg_from_bgno(struct virtio_driver *driver, struct ext2_blockgroup *rbg,
                   uint32_t bgno) {
 
 #if DEBUG_LEVEL > DEBUG_TRACE
-{
-  char msg[] = "trying to read a bg from bgno: ";
-  eprint_str(msg);
-  eprint_num(bgno);
-  eprint('\n');
-}
+  {
+    char msg[] = "trying to read a bg from bgno: ";
+    eprint_str(msg);
+    eprint_num(bgno);
+    eprint('\n');
+  }
 #endif
 
-  uint64_t bg_sector = EXT2_FIRST_OFFSET_AFTER_SUPERBLOCK + (bgno * sizeof(struct ext2_blockgroup));
+  uint64_t bg_sector = EXT2_FIRST_OFFSET_AFTER_SUPERBLOCK +
+                       (bgno * sizeof(struct ext2_blockgroup));
   // Read in the block group.
-  virtio_blk_read_sync(driver, (void*)rbg, bg_sector, sizeof(struct ext2_blockgroup));
+  virtio_blk_read_sync(driver, (void *)rbg, bg_sector,
+                       sizeof(struct ext2_blockgroup));
 
   return true;
 }
@@ -111,10 +113,10 @@ void debug_dirent(struct virtio_driver *driver,
       };
       memcpy(filename, de->name, de->name_len);
 #if DEBUG_LEVEL > DEBUG_TRACE
-{
-      eprint_str(filename);
-      eprint('\n');
-}
+      {
+        eprint_str(filename);
+        eprint('\n');
+      }
 #endif
       dirent_idx += de->rec_len;
     }
