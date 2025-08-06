@@ -39,7 +39,6 @@ int main() {
 
   evt.id = 0;
 
-
   printf("Preparing to run the internal unit tests.\n");
 
   mount_hd();
@@ -53,21 +52,53 @@ int main() {
 
   printf("Preparing to run user-facing unit tests.\n");
 
-  // Determine whether a read from the disk is successful ...
-  int fd = open("/eve", 0);
+  // Testing whether simple ext2 read works.
+  printf("Attempting to read from /random4: ");
   char actual[8] = {
       0,
   };
+
+  int fd = open("/eve", 0);
+  if (fd < 0) {
+    printf("Error opening /eve");
+    return 1;
+  }
   char expected[] = "dam\n";
   lseek(fd, 1, SEEK_SET);
   read(fd, actual, 7);
   if (strcmp(actual, expected)) {
-    printf("Error reading from file (actual: %s vs expected: %s)\n", actual, expected);
+    printf("Error reading from file (actual: %s vs expected: %s)\n", actual,
+           expected);
     return 1;
   } else {
     printf("Success\n");
   }
-  //close(fd);
 
+  // Testing whether reading from a non-0 block group works.
+  printf("Attempting to read from /dir9/random1: ");
+  int fd2 = open("/dir9/random1", 0);
+  if (fd2 < 0) {
+    printf("Error opening /dir9/random1");
+    return 1;
+  }
+  char random1_expected[] = {0x4c, 0x5a, 0xbf, 0x19, 0x00, 0xa4, 0xd1};
+  char random1_actual[8] = {0, };
+  read(fd2, random1_actual, 7);
+  if (memcmp(random1_actual, random1_expected, 7)) {
+    printf("Error reading from file (actual: ");
+    for (size_t s = 0; s<8; s++) {
+      printf("0x%02x ", random1_actual[s]);
+    }
+    printf(" vs expected: ");
+    for (size_t s = 0; s<8; s++) {
+      printf("0x%02x ", random1_expected[s]);
+    }
+    printf(")\n");
+  } else {
+    printf("Success\n");
+  }
+  printf("End of user-facing unit tests.\n");
+
+  // close(fd);
   return 0;
 }
