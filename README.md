@@ -35,8 +35,11 @@ If you want a [_console device_](), add[^1]
 ```console
 -chardev stdio,id=stdio,mux=on,signal=off -device virtio-serial-pci -device virtconsole,chardev=stdio -serial chardev:stdio
 ```
+**Warning**: If you use a console device and get an error about `cannot use stdio by multiple character devices` that is likely because you are executing with `-nographics` rather than `-graphics none`.[^qemugraphics]
 
 [^1]: That creates a character device redirected to the hosts' `stdio` and _whose name is stdio_ (not be confused with the _actual_ `stdio`); adds a VirtIO-based serial device to the bus; creates a console that uses the character device (previously created) named stdio for its IO; and redirects the emulated device's (default) serial output to the character device named stdio. 
+
+[^qemugraphics]: See [this QEMU wiki page on Gentoo's website](https://wiki.gentoo.org/wiki/QEMU/Options#Display_options) for information about the graphics configuration options for qemu.
 
 If you want to redirect the output that would otherwise go to the console to a TCP socket (which can be read using, for example, telnet), add[^2]
 
@@ -59,6 +62,19 @@ where `<DISK IMAGE FILEPATH>` is an appropriate path. See [below](#block-devices
 - `-machine dumpdtb=qemu.dtb`: Dump the device tree to the file `qemu.dtb`.
 
 [^boot]: See [https://github.com/riscv-software-src/opensbi/blob/master/docs/platform/qemu_virt.md](https://github.com/riscv-software-src/opensbi/blob/master/docs/platform/qemu_virt.md) for more information.
+
+**Examples**:
+
+Boot with entropy device, console for output and a hard drive (that mounts the ext2-formatted testing image) (but _no_ serial device for "internal" output):
+
+```console
+$ qemu-system-riscv64 -M virt -m 256 -display none  -bios <PATH TO OPENSBI BUILD>/fw_jump.bin -kernel ./build/demandos-test -object rng-random,filename=/dev/urandom,id=rng0 -device virtio-rng-pci,rng=rng0 -chardev stdio,id=stdio,mux=on,signal=off -device virtio-serial-pci -device virtconsole,chardev=stdio -device virtio-blk-pci,drive=drive0,id=virtblk0,num-queues=2 -drive file=test/fs/formatted.qcow2,if=none,id=drive0,cache=writethrough
+```
+
+Boot with entropy device, console for output, serial device (multiplexed onto the console) and a hard drive (that mounts the ext2-formatted testing image):
+```console
+$ qemu-system-riscv64 -M virt -m 256 -display none  -bios <PATH TO OPENSBI BUILD>/fw_jump.bin -kernel ./build/demandos-test -object rng-random,filename=/dev/urandom,id=rng0 -device virtio-rng-pci,rng=rng0 -chardev stdio,id=stdio,mux=on,signal=off -device virtio-serial-pci -device virtconsole,chardev=stdio -serial chardev:stdio -device virtio-blk-pci,drive=drive0,id=virtblk0,num-queues=2 -drive file=test/fs/formatted.qcow2,if=none,id=drive0,cache=writethrough
+```
 
 ### Tools
 
@@ -124,6 +140,16 @@ $ losetup -d loop0
 ```console
 $ qemu-img convert -f raw -O qcow2 formatted.raw formatted.qcow2
 ```
+
+#### Inspecting the filesystem on an image that contains a filesystem for testing:
+
+`dumpe2fs` displays in-depth information about ext-related filesystems. After building a loopback device (see [`losetup` above](#making-an-image-that-contains-a-filesystem-for-testing)),
+
+```console
+$ dump2efs /dev/loop0
+```
+
+if the loopback device is named `/dev/loop0`.
 
 ### Documentation
 
