@@ -49,8 +49,8 @@ int disk_write_handler(uint64_t fd, void *buf, size_t size) {
 
   struct io_descriptor *iod = &fds[fd];
 
-  uint64_t sector = sector_from_pos(iod->pos);
-  uint64_t offset = sector_offset_from_pos(iod->pos);
+  uint64_t sector = virtio_blk_sector_from_pos(iod->pos);
+  uint64_t offset = virtio_blk_sector_offset_from_pos(iod->pos);
 
   // First, read in the existing data ...
   uint8_t buffer[512] = {
@@ -92,8 +92,8 @@ int disk_read_handler(uint64_t fd, void *buf, size_t size) {
       0,
   };
 
-  uint64_t sector = sector_from_pos(iod->pos);
-  uint64_t offset = sector_offset_from_pos(iod->pos);
+  uint64_t sector = virtio_blk_sector_from_pos(iod->pos);
+  uint64_t offset = virtio_blk_sector_offset_from_pos(iod->pos);
 
   uint8_t result = virtio_blk_read_sector_sync(driver, sector, buffer);
 
@@ -209,8 +209,6 @@ uint64_t io_mount_hd() {
 
   bool superblock_read_result = read_superblock(driver, &_superblock);
 
-  // TODO: Make function for reading superblock.
-
   uint8_t buffer[1024] = {
       0,
   };
@@ -225,7 +223,3 @@ uint64_t io_mount_hd() {
 
   return 0;
 }
-
-uint64_t sector_from_pos(uint64_t pos) { return pos / VIRTIO_BLK_SIZE; }
-
-uint64_t sector_offset_from_pos(uint64_t pos) { return pos % VIRTIO_BLK_SIZE; }

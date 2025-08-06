@@ -83,12 +83,13 @@ uint8_t virtio_blk_read_sector_sync(struct virtio_driver *driver,
 size_t virtio_blk_read_sync(struct virtio_driver *driver, uint8_t *output,
                             uint64_t offset, size_t size) {
   size_t read_amt = 0, last_read_amt = 0;
+  size_t sector_offset = virtio_blk_sector_offset_from_pos(offset);
   for (read_amt = 0; read_amt < size; read_amt += last_read_amt) {
     char blk[VIRTIO_BLK_SIZE] = {
         0,
     };
     uint8_t read_result = virtio_blk_read_sector_sync(
-        driver, sector_from_pos(offset + read_amt), blk);
+        driver, virtio_blk_sector_from_pos(offset + read_amt), blk);
     // If the latest read did not get what we wanted, then assume
     // that nothing came back. Tell the caller only about what we know was good.
     if (read_result) {
@@ -105,9 +106,15 @@ size_t virtio_blk_read_sync(struct virtio_driver *driver, uint8_t *output,
     // Last read:   min(94                ), VIRTIO_BLK_SIZE1)
     // Last read:   min(94                ), VIRTIO_BLK_SIZE1)
     // Last read:   94
-    last_read_amt = MIN((size - read_amt), VIRTIO_BLK_SIZE);
-    memcpy(output + read_amt, blk, last_read_amt);
+    last_read_amt = MIN((size - read_amt), size_of_content_in_sector);
+    memcpy(output + read_amt, blk + sector_offset, last_read_amt);
+
+    sector_offset = 0;
   }
 
   return read_amt;
 }
+
+uint64_t virtio_blk_sector_from_pos(uint64_t pos) { return pos / VIRTIO_BLK_SIZE; }
+
+uint64_t virtio_blk_sector_offset_from_pos(uint64_t pos) { return pos % VIRTIO_BLK_SIZE; }

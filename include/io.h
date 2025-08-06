@@ -24,10 +24,6 @@ int open_fd(char *pathname);
 
 uint64_t io_mount_hd();
 
-uint64_t sector_from_pos(uint64_t pos);
-
-uint64_t sector_offset_from_pos(uint64_t pos);
-
 struct ext2_superblock *superblock_for_pathname(char *pathname);
 struct ext2_superblock *superblock_for_ino(uint32_t ino);
 

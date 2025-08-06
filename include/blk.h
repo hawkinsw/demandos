@@ -27,4 +27,9 @@ uint8_t virtio_blk_read_sector_sync(struct virtio_driver *driver,
                                     uint64_t sector, void *addr);
 size_t virtio_blk_read_sync(struct virtio_driver *driver, uint8_t *output,
                             uint64_t offset, size_t size);
+
+uint64_t virtio_blk_sector_from_pos(uint64_t pos);
+
+uint64_t virtio_blk_sector_offset_from_pos(uint64_t pos);
+
 #endif

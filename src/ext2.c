@@ -14,19 +14,19 @@
 
 bool bg_from_bgno(struct virtio_driver *driver, struct ext2_blockgroup *rbg,
                   uint32_t bgno) {
-  // Calculate the sector for the _primary_ block group containing the inode
-  // table that contains this inode (got that?)!
-  uint64_t bg_sector = sector_from_pos(EXT2_FIRST_OFFSET_AFTER_SUPERBLOCK +
-                                       (bgno * sizeof(struct ext2_blockgroup)));
-  uint64_t bg_sector_offset =
-      sector_offset_from_pos(EXT2_FIRST_OFFSET_AFTER_SUPERBLOCK +
-                             (bgno * sizeof(struct ext2_blockgroup)));
 
-  uint8_t buffer[512];
+#if DEBUG_LEVEL > DEBUG_TRACE
+{
+  char msg[] = "trying to read a bg from bgno: ";
+  eprint_str(msg);
+  eprint_num(bgno);
+  eprint('\n');
+}
+#endif
 
+  uint64_t bg_sector = EXT2_FIRST_OFFSET_AFTER_SUPERBLOCK + (bgno * sizeof(struct ext2_blockgroup));
   // Read in the block group.
-  uint8_t result = virtio_blk_read_sector_sync(driver, bg_sector, buffer);
-  memcpy(rbg, buffer + bg_sector_offset, sizeof(struct ext2_blockgroup));
+  virtio_blk_read_sync(driver, (void*)rbg, bg_sector, sizeof(struct ext2_blockgroup));
 
   return true;
 }
@@ -51,30 +51,26 @@ bool inode_from_ino(struct virtio_driver *driver,
 
   // Calculate the sector for the _primary_ block group containing the inode
   // table that contains this inode (got that?)!
-  uint64_t inode_table_block_group_sector = sector_from_pos(
+  uint64_t inode_table_block_group_sector = virtio_blk_sector_from_pos(
       1024 + 1024 +
       (inode_table_block_group * 1024 * superblock->s_blocks_per_group));
-  uint64_t inode_table_block_group_sector_offset = sector_offset_from_pos(
-      1024 + 1024 +
-      (inode_table_block_group * 1024 * superblock->s_blocks_per_group));
+  uint64_t inode_table_block_group_sector_offset =
+      virtio_blk_sector_offset_from_pos(
+          1024 + 1024 +
+          (inode_table_block_group * 1024 * superblock->s_blocks_per_group));
 
   // Read in the block group.
   struct ext2_blockgroup bg;
   uint8_t result = bg_from_bgno(driver, &bg, inode_table_block_group);
-  /*
-  uint8_t result =
-      virtio_blk_read_sync(driver, inode_table_block_group_sector, buffer);
-  memcpy(&bg, buffer + inode_table_block_group_sector_offset,
-         sizeof(struct ext2_blockgroup));
-    */
+
   // Read in the inode contents.
   uint64_t inode_table_entry_position =
       bg.bg_inode_table * 1024 +
       inode_table_index * /*sizeof(struct ext2_inode)*/ 256;
   uint64_t inode_table_entry_sector =
-      sector_from_pos(inode_table_entry_position);
+      virtio_blk_sector_from_pos(inode_table_entry_position);
   uint64_t inode_table_entry_sector_offset =
-      sector_offset_from_pos(inode_table_entry_position);
+      virtio_blk_sector_offset_from_pos(inode_table_entry_position);
 
   result =
       virtio_blk_read_sector_sync(driver, inode_table_entry_sector, buffer);
@@ -114,8 +110,12 @@ void debug_dirent(struct virtio_driver *driver,
           0,
       };
       memcpy(filename, de->name, de->name_len);
+#if DEBUG_LEVEL > DEBUG_TRACE
+{
       eprint_str(filename);
       eprint('\n');
+}
+#endif
       dirent_idx += de->rec_len;
     }
   }
@@ -293,8 +293,12 @@ bool read_superblock(struct virtio_driver *driver,
     return false;
   }
 
+#if DEBUG_LEVEL > DEBUG_TRACE
+{
   eprint_buffer("Contents of superblock", (uint8_t *)superblock,
                 sizeof(struct ext2_superblock));
+}
+#endif
 
 #if 1
   if (superblock->s_blocks_count == 0x400) {
@@ -352,8 +356,8 @@ bool test_ext2_implementation() {
       superblock.s_blocks_count / superblock.s_blocks_per_group;
 
   // Read the first (primary copy of the) block group.
-  uint8_t result = virtio_blk_read_sector_sync(
-      driver, sector_from_pos(EXT2_FIRST_OFFSET_AFTER_SUPERBLOCK), buffer);
+  uint8_t result = virtio_blk_read_sync(
+      driver, buffer, EXT2_FIRST_OFFSET_AFTER_SUPERBLOCK, actual_block_size);
   if (result) {
     return (uint64_t)-1;
   }
@@ -408,7 +412,8 @@ bool test_ext2_implementation() {
 
   inode_from_path(driver, &superblock, "/blank", &ino);
   result = virtio_blk_read_sector_sync(
-      driver, sector_from_pos(ino.i_block[0] * actual_block_size), buffer);
+      driver, virtio_blk_sector_from_pos(ino.i_block[0] * actual_block_size),
+      buffer);
   eprint_buffer("Contents of block 0 of blank file", buffer, 512);
   if (!strncmp("testing", (char *)buffer, strlen("testing"))) {
     eprint_str("Success!\n");
@@ -419,7 +424,8 @@ bool test_ext2_implementation() {
 
   inode_from_path(driver, &superblock, "/eve", &ino);
   result = virtio_blk_read_sector_sync(
-      driver, sector_from_pos(ino.i_block[0] * actual_block_size), buffer);
+      driver, virtio_blk_sector_from_pos(ino.i_block[0] * actual_block_size),
+      buffer);
   eprint_buffer("Contents of block 0 of eve file", buffer, 512);
   if (!strncmp("adam", (char *)buffer, strlen("adam"))) {
     eprint_str("Success!\n");
