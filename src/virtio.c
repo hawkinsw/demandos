@@ -1,11 +1,13 @@
 #include "virtio.h"
 #include "build_config.h"
 #include "demandos.h"
+#include "e.h"
 #include "ecall.h"
 #include "smemory.h"
 #include "system.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include <sys/types.h>
 
 struct blk_config {
@@ -13,12 +15,17 @@ struct blk_config {
 };
 
 uint16_t vring_next_descr(struct vring *vring) {
-  return vring->bookeeping.descr_next % (vring->num - 1);
+  return vring->bookeeping.descr_next;
 }
 
 uint16_t vring_add_to_descr(struct vring *vring, void *buf, uint32_t size,
                             uint16_t flags, uint32_t where, bool ends_chain) {
 
+  if (where >= vring->num) {
+    eprint_str("Error: Attempting to use a descriptor entry beyond the "
+               "available quantity.\n");
+    epoweroff();
+  }
   uint32_t next = (vring->bookeeping.descr_next + 1) % (vring->num - 1);
 
   vring->desc[where].addr = (uint64_t)buf;
@@ -29,13 +36,17 @@ uint16_t vring_add_to_descr(struct vring *vring, void *buf, uint32_t size,
                                  ? vring->desc[where].flags & VRING_DESC_NO_NEXT
                                  : vring->desc[where].flags | VRING_DESC_NEXT;
 
+  if (next >= vring->num) {
+    eprint_str("Warning: Providing a next index for a descriptor that is "
+               "beyond the available quantity.\n");
+  }
   return vring->bookeeping.descr_next = next;
 }
 
 void vring_use_avail(struct vring *vring, uint32_t used_descr_idx) {
-  vring->avail->ring[vring->bookeeping.avail_next] = used_descr_idx;
-  vring->bookeeping.avail_next =
-      (vring->bookeeping.avail_next + 1) % vring->size;
+  vring->avail->ring[vring->bookeeping.avail_next % (vring->num - 1)] =
+      used_descr_idx;
+  vring->bookeeping.avail_next = (vring->bookeeping.avail_next + 1);
   WRITE_FENCE();
   vring->avail->idx = vring->bookeeping.avail_next;
   WRITE_FENCE();
@@ -181,7 +192,7 @@ uint64_t virtio_get_randomness(void *buffer, uint64_t length) {
     return -1;
   }
 
-  uint16_t next = driver->vring->bookeeping.descr_next;
+  uint16_t next = vring_next_descr(driver->vring);
 
   for (size_t filled = 0; filled < length; filled += chunk_size) {
     uint32_t just_used = next;

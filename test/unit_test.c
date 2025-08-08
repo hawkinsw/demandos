@@ -1,6 +1,7 @@
 #include "event.h"
 #include "system.h"
 #include <fcntl.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -80,25 +81,54 @@ int main() {
   if (fd2 < 0) {
     printf("Error opening /dir9/random1");
     return 1;
+  } else {
+    printf("... okay.\n");
   }
   char random1_expected[] = {0x4c, 0x5a, 0xbf, 0x19, 0x00, 0xa4, 0xd1};
   char random1_actual[8] = {
       0,
   };
-  read(fd2, random1_actual, 7);
-  if (memcmp(random1_actual, random1_expected, 7)) {
-    printf("Error reading from file (actual: ");
-    for (size_t s = 0; s < 8; s++) {
-      printf("0x%02x ", random1_actual[s]);
+
+  bool random1_file_read_test_failure = false;
+  for (size_t i = 0; i < 800; i++) {
+    printf("Doing iteration %d\n", i);
+    lseek(fd2, 0, SEEK_SET);
+    read(fd2, random1_actual, 7);
+    if (memcmp(random1_actual, random1_expected, 7)) {
+      printf("Error reading from file (actual: ");
+      for (size_t s = 0; s < 8; s++) {
+        printf("0x%02x ", random1_actual[s]);
+      }
+      printf(" vs expected: ");
+      for (size_t s = 0; s < 8; s++) {
+        printf("0x%02x ", random1_expected[s]);
+      }
+      printf(")\n");
+      random1_file_read_test_failure = true;
+      break;
     }
-    printf(" vs expected: ");
-    for (size_t s = 0; s < 8; s++) {
-      printf("0x%02x ", random1_expected[s]);
-    }
-    printf(")\n");
-  } else {
-    printf("Success\n");
   }
+  if (!random1_file_read_test_failure) {
+      printf("(random1_file_read) Success\n");
+  }
+
+  bool getrandom_test_failure = false;
+  char random_buf[8] = {
+      0,
+  };
+  for (size_t i = 0; i < 10000; i++) {
+    ssize_t getrandom_result = getrandom(random_buf, 8, GRND_RANDOM);
+    if (getrandom_result != 8) {
+      printf("Expected to get 8 bytes of random data by only got %d\n",
+             getrandom_result);
+      break;
+    }
+  }
+
+  if (!getrandom_test_failure) {
+    printf("(getrandom) Success\n");
+  }
+
   printf("End of user-facing unit tests.\n");
 
   // close(fd);

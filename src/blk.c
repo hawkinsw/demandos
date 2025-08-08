@@ -1,5 +1,5 @@
 #include "blk.h"
-#include "io.h"
+#include "system.h"
 #include "virtio.h"
 
 #include <byteswap.h>
@@ -39,6 +39,9 @@ uint8_t virtio_blk_write_sync(struct virtio_driver *driver, uint64_t sector,
   signal_virtio_device(driver, 0);
   vring_wait_completion(vring);
 
+  vring->bookeeping.descr_next = used;
+  WRITE_FENCE();
+
   return blk_io_status;
 }
 
@@ -62,6 +65,7 @@ uint8_t virtio_blk_read_sector_sync(struct virtio_driver *driver,
   read_sgs[2].len = sizeof(uint8_t);
 
   struct vring *vring = &driver->vring[0];
+
   uint16_t next = vring_next_descr(vring);
   uint32_t used = next;
 
@@ -75,6 +79,9 @@ uint8_t virtio_blk_read_sector_sync(struct virtio_driver *driver,
   vring_use_avail(vring, used);
   signal_virtio_device(driver, 0);
   vring_wait_completion(vring);
+
+  vring->bookeeping.descr_next = used;
+  WRITE_FENCE();
 
   return blk_io_status;
 }

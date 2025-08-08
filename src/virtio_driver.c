@@ -143,18 +143,16 @@ bool init_blk_virtio(struct virtio_driver *driver, void *pci_device,
   uint16_t virtio_q_len =
       virtio_device_queue_size_read(host_configuration_regs);
 
-#if DEBUG_LEVEL > DEBUG_TRACE
   char msg2[] = "Found block device with queue size: ";
   eprint_str(msg2);
   eprint_num(virtio_q_len);
   eprint('\n');
-#endif
 
   driver->vring =
       (struct vring *)DEMANDOS_INTERNAL(malloc)(sizeof(struct vring));
   vring_init(&driver->vring[0], 256);
 
-  driver->vring->num = virtio_q_len;
+  driver->vring[0].num = virtio_q_len;
 
   // Write the address of the virtq descr.
   virtio_device_queue_desc_write(host_configuration_regs,
@@ -218,6 +216,8 @@ bool init_console_virtio(struct virtio_driver *driver, void *pci_device,
       (struct vring *)DEMANDOS_INTERNAL(malloc)(sizeof(struct vring) * 2);
   vring_init(&driver->vring[0], 128);
   vring_init(&driver->vring[1], 128);
+  driver->vring[0].num = virtio_q_len;
+  driver->vring[1].num = virtio_q_len;
 
   // Write the address of the virtq descr.
   virtio_device_queue_desc_write(host_configuration_regs,
