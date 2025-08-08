@@ -1,4 +1,5 @@
 #include "memory.h"
+#include "build_config.h"
 #include "demandos.h"
 #include "e.h"
 #include "ecall.h"
@@ -48,7 +49,7 @@ struct arena_element_512 {
 struct arena_element_512 *arena_start_512 = NULL;
 void *arena_end_512 = NULL;
 
-#define TRY_ALLOC_FROM(x)                                                      \
+#define TRY_ALLOC_FROM_DEBUG(x)                                                \
   if (size < x) {                                                              \
     for (size_t i = 0; i < ARENA_ELEMENT_COUNT; i++) {                         \
       if (!arena_start_##x[i].used) {                                          \
@@ -68,6 +69,16 @@ void *arena_end_512 = NULL;
           eprint_num(i);                                                       \
           eprint('\n');                                                        \
         }                                                                      \
+      }                                                                        \
+    }                                                                          \
+  }
+
+#define TRY_ALLOC_FROM(x)                                                      \
+  if (size < x) {                                                              \
+    for (size_t i = 0; i < ARENA_ELEMENT_COUNT; i++) {                         \
+      if (!arena_start_##x[i].used) {                                          \
+        arena_start_##x[i].used = 1;                                           \
+        return arena_start_##x[i].buffer;                                      \
       }                                                                        \
     }                                                                          \
   }
@@ -128,11 +139,19 @@ void initialize_heap() {
 
 void *DEMANDOS_INTERNAL(malloc)(size_t size) {
 
+#if DEBUG_LEVEL > DEBUG_TRACE
+  TRY_ALLOC_FROM_DEBUG(32)
+  TRY_ALLOC_FROM_DEBUG(64)
+  TRY_ALLOC_FROM_DEBUG(128)
+  TRY_ALLOC_FROM_DEBUG(256)
+  TRY_ALLOC_FROM_DEBUG(512)
+#else
   TRY_ALLOC_FROM(32)
   TRY_ALLOC_FROM(64)
   TRY_ALLOC_FROM(128)
   TRY_ALLOC_FROM(256)
   TRY_ALLOC_FROM(512)
+#endif
 
   {
     char msg[] = "Found nothing to allocate -- return NULL\n";
