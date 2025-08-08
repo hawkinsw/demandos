@@ -186,9 +186,13 @@ int open_fd(char *pathname) {
     assert(_superblock_mounted);
   }
 
+#if DEBUG_LEVEL > DEBUG_TRACE
+{
   eprint_str("Found the inode (");
   eprint_num(fds[fd].ino);
   eprint('\n');
+}
+#endif
 
   return fd;
 }
