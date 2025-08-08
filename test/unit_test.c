@@ -109,7 +109,7 @@ int main() {
     }
   }
   if (!random1_file_read_test_failure) {
-      printf("(random1_file_read) Success\n");
+    printf("(random1_file_read) Success\n");
   }
 
   bool getrandom_test_failure = false;

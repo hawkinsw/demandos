@@ -43,12 +43,12 @@ bool inode_from_ino(struct virtio_driver *driver,
       INODE_LOC_IN_TABLE(ino, superblock->s_inodes_per_group);
 
 #if DEBUG_LEVEL > DEBUG_TRACE
-{
-  char msg[] = "inode_table_block_group: ";
-  eprint_str(msg);
-  eprint_num(inode_table_block_group);
-  eprint('\n');
-}
+  {
+    char msg[] = "inode_table_block_group: ";
+    eprint_str(msg);
+    eprint_num(inode_table_block_group);
+    eprint('\n');
+  }
 #endif
 
   uint8_t buffer[512] = {
@@ -379,7 +379,7 @@ bool test_ext2_implementation() {
     eprint_str(here);
   } else {
     eprint_str("Failure to read the proper block bitmap id.\n");
-    //epoweroff();
+    // epoweroff();
   }
 
   if (bg->bg_inode_bitmap == 0x7) {
@@ -387,7 +387,7 @@ bool test_ext2_implementation() {
     eprint_str(here);
   } else {
     eprint_str("Failure to read the proper inode bitmap id.\n");
-  //  epoweroff();
+    //  epoweroff();
   }
 
   if (bg->bg_inode_table == 0x8) {
@@ -395,7 +395,7 @@ bool test_ext2_implementation() {
     eprint_str(here);
   } else {
     eprint_str("Failure to read the proper inode table id.\n");
-   // epoweroff();
+    // epoweroff();
   }
 
   {

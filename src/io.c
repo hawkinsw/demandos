@@ -187,11 +187,11 @@ int open_fd(char *pathname) {
   }
 
 #if DEBUG_LEVEL > DEBUG_TRACE
-{
-  eprint_str("Found the inode (");
-  eprint_num(fds[fd].ino);
-  eprint('\n');
-}
+  {
+    eprint_str("Found the inode (");
+    eprint_num(fds[fd].ino);
+    eprint('\n');
+  }
 #endif
 
   return fd;
