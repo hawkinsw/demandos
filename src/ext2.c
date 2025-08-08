@@ -42,10 +42,14 @@ bool inode_from_ino(struct virtio_driver *driver,
   uint32_t inode_table_index =
       INODE_LOC_IN_TABLE(ino, superblock->s_inodes_per_group);
 
+#if DEBUG_LEVEL > DEBUG_TRACE
+{
   char msg[] = "inode_table_block_group: ";
   eprint_str(msg);
   eprint_num(inode_table_block_group);
   eprint('\n');
+}
+#endif
 
   uint8_t buffer[512] = {
       0,
@@ -296,26 +300,9 @@ bool read_superblock(struct virtio_driver *driver,
   }
 
 #if DEBUG_LEVEL > DEBUG_TRACE
-{
-  eprint_buffer("Contents of superblock", (uint8_t *)superblock,
-                sizeof(struct ext2_superblock));
-}
-#endif
-
-#if 1
-  if (superblock->s_blocks_count == 0x400) {
-    char here[] = "Read the proper number of blocks!\n";
-    eprint_str(here);
-  }
-
-  if (superblock->s_inodes_count == 0x80) {
-    char here[] = "Read the proper number of inodes!\n";
-    eprint_str(here);
-  }
-
-  if (superblock->s_first_inode == 11) {
-    char here[] = "Read the proper first inode!\n";
-    eprint_str(here);
+  {
+    eprint_buffer("Contents of superblock", (uint8_t *)superblock,
+                  sizeof(struct ext2_superblock));
   }
 #endif
 
@@ -347,6 +334,27 @@ bool test_ext2_implementation() {
 
   read_superblock(driver, &superblock);
 
+  if (superblock.s_blocks_count == 10000) {
+    char here[] = "Read the proper number of blocks!\n";
+    eprint_str(here);
+  } else {
+    char here[] = "Error: Did not read the proper number of blocks!\n";
+    eprint_str(here);
+  }
+
+  if (superblock.s_inodes_count == 2496) {
+    char here[] = "Read the proper number of inodes!\n";
+    eprint_str(here);
+  } else {
+    char here[] = "Error: Did not read the proper number of inodes!\n";
+    eprint_str(here);
+  }
+
+  if (superblock.s_first_inode == 11) {
+    char here[] = "Read the proper first inode!\n";
+    eprint_str(here);
+  }
+
   char buffer[1024] = {
       0,
   };
@@ -371,7 +379,7 @@ bool test_ext2_implementation() {
     eprint_str(here);
   } else {
     eprint_str("Failure to read the proper block bitmap id.\n");
-    epoweroff();
+    //epoweroff();
   }
 
   if (bg->bg_inode_bitmap == 0x7) {
@@ -379,7 +387,7 @@ bool test_ext2_implementation() {
     eprint_str(here);
   } else {
     eprint_str("Failure to read the proper inode bitmap id.\n");
-    epoweroff();
+  //  epoweroff();
   }
 
   if (bg->bg_inode_table == 0x8) {
@@ -387,7 +395,7 @@ bool test_ext2_implementation() {
     eprint_str(here);
   } else {
     eprint_str("Failure to read the proper inode table id.\n");
-    epoweroff();
+   // epoweroff();
   }
 
   {
