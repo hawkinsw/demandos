@@ -75,7 +75,7 @@ bool init_entropy_virtio(struct virtio_driver *driver, void *pci_device,
   // Allocate a single vring.
   driver->vring = DEMANDOS_INTERNAL(malloc)(sizeof(struct vring));
 
-  vring_init(driver->vring, 8);
+  vring_init(driver->vring, virtio_q_len);
 
   driver->vring->num = virtio_q_len;
 
@@ -214,8 +214,8 @@ bool init_console_virtio(struct virtio_driver *driver, void *pci_device,
 
   driver->vring =
       (struct vring *)DEMANDOS_INTERNAL(malloc)(sizeof(struct vring) * 2);
-  vring_init(&driver->vring[0], 128);
-  vring_init(&driver->vring[1], 128);
+  vring_init(&driver->vring[0], virtio_q_len);
+  vring_init(&driver->vring[1], virtio_q_len);
   driver->vring[0].num = virtio_q_len;
   driver->vring[1].num = virtio_q_len;
 

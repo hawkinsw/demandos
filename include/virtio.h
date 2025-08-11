@@ -75,12 +75,13 @@ struct vring {
   struct vring_used *used;
 };
 
-uint16_t vring_next_descr(struct vring *vring);
+uint16_t vring_use_descr(struct vring *vring);
+uint16_t vring_unuse_descr(struct vring *vring, uint16_t goback);
 
 uint16_t vring_add_to_descr(struct vring *vring, void *buf, uint32_t size,
                               uint16_t flags, uint32_t where, bool ends_chain);
 
-void vring_use_avail(struct vring *vring, uint32_t used_descr_idx);
+void vring_post_descr(struct vring *vring, uint32_t used_descr_idx);
 
 void vring_wait_completion(struct vring *vring);
 

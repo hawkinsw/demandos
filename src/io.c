@@ -26,12 +26,13 @@ int stdout_write_handler(uint64_t fd, void *buf, size_t size) {
     return -1;
   }
 
-  uint32_t just_used = driver->vring[1].bookeeping.descr_next;
+  uint32_t just_used = vring_use_descr(&driver->vring[1]);
   vring_add_to_descr(&driver->vring[1], (void *)buf, size, 0, just_used, true);
 
-  vring_use_avail(&driver->vring[1], just_used);
+  vring_post_descr(&driver->vring[1], just_used);
   signal_virtio_device(driver, 1);
   vring_wait_completion(&driver->vring[1]);
+  vring_unuse_descr(&driver->vring[1], just_used);
 
   return size;
 }

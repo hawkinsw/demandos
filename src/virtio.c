@@ -14,8 +14,11 @@ struct blk_config {
   uint32_t blk_size;
 };
 
-uint16_t vring_next_descr(struct vring *vring) {
+uint16_t vring_use_descr(struct vring *vring) {
   return vring->bookeeping.descr_next;
+}
+uint16_t vring_unuse_descr(struct vring *vring, uint16_t goback) {
+  return vring->bookeeping.descr_next = goback;
 }
 
 uint16_t vring_add_to_descr(struct vring *vring, void *buf, uint32_t size,
@@ -43,7 +46,7 @@ uint16_t vring_add_to_descr(struct vring *vring, void *buf, uint32_t size,
   return vring->bookeeping.descr_next = next;
 }
 
-void vring_use_avail(struct vring *vring, uint32_t used_descr_idx) {
+void vring_post_descr(struct vring *vring, uint32_t used_descr_idx) {
   vring->avail->ring[vring->bookeeping.avail_next % (vring->num - 1)] =
       used_descr_idx;
   vring->bookeeping.avail_next = (vring->bookeeping.avail_next + 1);
@@ -51,6 +54,7 @@ void vring_use_avail(struct vring *vring, uint32_t used_descr_idx) {
   vring->avail->idx = vring->bookeeping.avail_next;
   WRITE_FENCE();
 }
+
 
 void vring_wait_completion(struct vring *vring) {
 
@@ -192,16 +196,17 @@ uint64_t virtio_get_randomness(void *buffer, uint64_t length) {
     return -1;
   }
 
-  uint16_t next = vring_next_descr(driver->vring);
+  uint16_t next = vring_use_descr(driver->vring);
 
   for (size_t filled = 0; filled < length; filled += chunk_size) {
     uint32_t just_used = next;
     next = vring_add_to_descr(driver->vring, (void *)buf, chunk_size, 2, next,
                               true);
 
-    vring_use_avail(&driver->vring[0], just_used);
+    vring_post_descr(&driver->vring[0], just_used);
     signal_virtio_device(driver, 0);
     vring_wait_completion(&driver->vring[0]);
+    vring_unuse_descr(&driver->vring[0], just_used);
 
 #if DEBUG_LEVEL > DEBUG_TRACE
     {

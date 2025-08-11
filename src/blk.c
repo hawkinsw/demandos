@@ -25,7 +25,7 @@ uint8_t virtio_blk_write_sync(struct virtio_driver *driver, uint64_t sector,
   write_sgs[2].len = sizeof(uint8_t);
 
   struct vring *vring = &driver->vring[0];
-  uint16_t next = vring_next_descr(vring);
+  uint16_t next = vring_use_descr(vring);
   uint32_t used = next;
 
   next = vring_add_to_descr(vring, write_sgs[0].addr, write_sgs[0].len, 0, next,
@@ -35,11 +35,11 @@ uint8_t virtio_blk_write_sync(struct virtio_driver *driver, uint64_t sector,
   next = vring_add_to_descr(vring, write_sgs[2].addr, write_sgs[2].len,
                             VRING_DESCR_WRITABLE, next, true);
 
-  vring_use_avail(vring, used);
+  vring_post_descr(vring, used);
   signal_virtio_device(driver, 0);
   vring_wait_completion(vring);
+  vring_unuse_descr(vring, used);
 
-  vring->bookeeping.descr_next = used;
   WRITE_FENCE();
 
   return blk_io_status;
@@ -66,7 +66,7 @@ uint8_t virtio_blk_read_sector_sync(struct virtio_driver *driver,
 
   struct vring *vring = &driver->vring[0];
 
-  uint16_t next = vring_next_descr(vring);
+  uint16_t next = vring_use_descr(vring);
   uint32_t used = next;
 
   next = vring_add_to_descr(vring, read_sgs[0].addr, read_sgs[0].len, 0, next,
@@ -76,11 +76,11 @@ uint8_t virtio_blk_read_sector_sync(struct virtio_driver *driver,
   next = vring_add_to_descr(vring, read_sgs[2].addr, read_sgs[2].len,
                             VRING_DESCR_WRITABLE, next, true);
 
-  vring_use_avail(vring, used);
+  vring_post_descr(vring, used);
   signal_virtio_device(driver, 0);
   vring_wait_completion(vring);
+  vring_unuse_descr(vring, used);
 
-  vring->bookeeping.descr_next = used;
   WRITE_FENCE();
 
   return blk_io_status;
