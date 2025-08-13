@@ -7,13 +7,32 @@ OUTPUT_FORMAT("elf64-littleriscv", "elf64-littleriscv",
 OUTPUT_ARCH(riscv)
 ENTRY(_boot)
 SEARCH_DIR("=/home/hawkinsw/code/riscv-gnu-toolchain/riscv-gnu-toolchain/../install/riscv64-unknown-linux-gnu/lib64/lp64d"); SEARCH_DIR("=/home/hawkinsw/code/riscv-gnu-toolchain/riscv-gnu-toolchain/../install/riscv64-unknown-linux-gnu/lib64"); SEARCH_DIR("=/usr/local/lib64/lp64d"); SEARCH_DIR("=/usr/local/lib64"); SEARCH_DIR("=/lib64/lp64d"); SEARCH_DIR("=/lib64"); SEARCH_DIR("=/usr/lib64/lp64d"); SEARCH_DIR("=/usr/lib64"); SEARCH_DIR("=/home/hawkinsw/code/riscv-gnu-toolchain/riscv-gnu-toolchain/../install/riscv64-unknown-linux-gnu/lib"); SEARCH_DIR("=/usr/local/lib"); SEARCH_DIR("=/lib"); SEARCH_DIR("=/usr/lib");
+
+/*
+ * demandos configurations.
+ */
+DEMANDOS_STACK_SIZE = 8192 + 8192;
+DEMANDOS_HEAP_SIZE = 1024 * 1024 * 24;
+
+/*
+ * Sections with no specific memory region noted look at memory allocations
+ * from top to bottom and place the section in the first one with matching
+ * characteristics. In other words, this memory allocation must be first
+ * so that the one below continues to contain only demandos things.
+ */
 MEMORY
 {
 	sram(rx) : ORIGIN = 0x80200000, LENGTH = 31M
 }
+
+/*
+ * This named memory spot is for demandos -- all items that it manages (as an OS)
+ * are in here (e.g., heap, stack, kernel metadata, etc). Only the .stack, .kernel
+ * and .heap sections are placed into this memory region (explicitly).
+ */
 MEMORY
 {
-	bss_data(rw) : ORIGIN = 0x80300000, LENGTH = 100M
+	demandos_managed(rw) : ORIGIN = 0x80300000, LENGTH = 100M
 }
 
 SECTIONS
@@ -275,30 +294,31 @@ SECTIONS
   .gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }
   /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
 
-  .free : {
-    /* Make the stack space start at the beginning of the BSS section! */
+  .stack : {
+    /* Make the stack space start at the beginning of the demandos_managed section! */
 		. = ALIGN(8);
 		_esp = .;
-    /* Align with standard Linux. (taken from ulimit -s) */
-		. += 8192;
+		. += DEMANDOS_STACK_SIZE;
 		_sp = . - 16;
+  } > demandos_managed
 
+  .kernel : {
     /* Now, let_s give ourselves some space for storing metadata! */
    _kernel_metadata = .;
     . += 8192;
 		. = ALIGN(4096);
-  } > bss_data
+  } > demandos_managed
 
   .heap : {
     . = ALIGN(4096);
     _heap_start = .;
-    . += 1024 * 1024 * 24;
+    . += DEMANDOS_HEAP_SIZE;
     . = ALIGN(4096);
     _heap_end = .;
 
     . = ALIGN(4096);
     _brk_start = .;
-  } > bss_data
+  } > demandos_managed
   
 }
 
