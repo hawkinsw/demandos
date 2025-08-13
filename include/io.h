@@ -21,6 +21,7 @@ extern  struct io_descriptor fds[100];
 bool is_fd_open(uint64_t fd);
 
 int open_fd(char *pathname);
+int close_fd(int fd);
 
 uint64_t io_mount_hd();
 

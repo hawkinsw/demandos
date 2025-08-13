@@ -149,6 +149,15 @@ uint64_t openat_s(uint64_t _dirfd, uint64_t _pathname, uint64_t _flags,
   return open_fd(pathname);
 }
 
+uint64_t close_s(uint64_t _fd, uint64_t b, uint64_t c,
+                  uint64_t d, uint64_t e, uint64_t f) {
+
+  int fd = (int)_fd;
+
+  return close_fd(fd);
+}
+
+
 uint64_t seek_s(uint64_t _fd, uint64_t _offset, uint64_t _whence, uint64_t d,
                 uint64_t e, uint64_t f) {
   uint64_t fd = _fd;
@@ -438,6 +447,7 @@ void configure_syscall_handlers(void) {
   syscall_handlers[29] = ioctl_s;
   syscall_handlers[14] = sys_breakpoint;
   syscall_handlers[56] = openat_s;
+  syscall_handlers[57] = close_s;
   syscall_handlers[63] = read_s;
   syscall_handlers[62] = seek_s;
   syscall_handlers[115] = nanosleep_s;

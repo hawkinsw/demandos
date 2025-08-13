@@ -14,10 +14,18 @@
 
 // We currently support no more than 100 open file descriptors.
 struct io_descriptor fds[100] = {};
-uint64_t next_fd = 3;
 uint64_t max_fd = 100;
 
-bool is_fd_open(uint64_t fd) { return (fd < max_fd && fds[fd].open); }
+bool is_fd_valid(uint64_t fd) { return (fd < max_fd); }
+bool is_fd_open(uint64_t fd) { return ( is_fd_valid(fd) && fds[fd].open); }
+int next_fd() {
+  for (size_t i = 0; i < max_fd; i++) {
+    if (!fds[i].open) {
+      return i;
+    }
+  }
+  return -1;
+}
 
 int stdout_write_handler(uint64_t fd, void *buf, size_t size) {
   struct virtio_driver *driver = find_virtio_driver(3);
@@ -160,13 +168,31 @@ struct ext2_superblock *superblock_for_pathname(char *pathname) {
   return &_superblock;
 }
 
+int close_fd(int fd) {
+
+  if (!is_fd_valid(fd) || !is_fd_open(fd)) {
+    return -1;
+  }
+
+  fds[fd].open = false;
+  fds[fd].write_handler = NULL;
+  fds[fd].read_handler = NULL;
+  fds[fd].seek_handler = NULL;
+
+  return 0;
+}
+
 int open_fd(char *pathname) {
   struct virtio_driver *driver = find_virtio_driver(1);
   if (!driver || !driver->initialized) {
     return -1;
   }
 
-  uint64_t fd = next_fd++;
+  int fd = next_fd();
+
+  if (fd < 0) {
+    return fd;
+  }
 
   fds[fd].open = true;
   fds[fd].write_handler = disk_write_handler;
