@@ -57,31 +57,8 @@ int disk_write_handler(uint64_t fd, void *buf, size_t size) {
   }
 
   struct io_descriptor *iod = &fds[fd];
-
-  uint64_t sector = virtio_blk_sector_from_pos(iod->pos);
-  uint64_t offset = virtio_blk_sector_offset_from_pos(iod->pos);
-
-  // First, read in the existing data ...
-  uint8_t buffer[512] = {
-      0,
-  };
-  uint8_t result = virtio_blk_read_sector_sync(driver, sector, buffer);
-
-  if (result) {
-    return result;
-  }
-
-  memcpy(((void *)buffer) + offset, buf, size);
-  result = virtio_blk_write_sync(driver, sector, buffer);
-
-#if DEBUG_LEVEL > DEBUG_TRACE
-  char here[] = "Result of read operation on block device: ";
-  eprint_str(here);
-  eprint_num(result);
-  eprint('\n');
-#endif
-
-  return size;
+  struct ext2_superblock *superb = superblock_for_ino(iod->ino);
+  return write_to_ino(driver, superb, iod->ino, buf, iod->pos, size);
 }
 
 int disk_read_handler(uint64_t fd, void *buf, size_t size) {
@@ -96,25 +73,6 @@ int disk_read_handler(uint64_t fd, void *buf, size_t size) {
   }
 
   struct io_descriptor *iod = &fds[fd];
-
-  uint8_t buffer[512] = {
-      0,
-  };
-
-  uint64_t sector = virtio_blk_sector_from_pos(iod->pos);
-  uint64_t offset = virtio_blk_sector_offset_from_pos(iod->pos);
-
-  uint8_t result = virtio_blk_read_sector_sync(driver, sector, buffer);
-
-  memcpy(buf, ((void *)buffer) + offset, size);
-
-#if DEBUG_LEVEL > DEBUG_TRACE
-  char here[] = "Result of read operation on block device: ";
-  eprint_str(here);
-  eprint_num(result);
-  eprint('\n');
-#endif
-
   struct ext2_superblock *superb = superblock_for_ino(iod->ino);
   return read_from_ino(driver, superb, iod->ino, buf, iod->pos, size);
 }
