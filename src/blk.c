@@ -1,12 +1,14 @@
 #include "blk.h"
+#include "build_config.h"
 #include "system.h"
+#include "util.h"
 #include "virtio.h"
 
 #include <byteswap.h>
 #include <string.h>
 
-uint8_t virtio_blk_write_sync(struct virtio_driver *driver, uint64_t sector,
-                              void *addr) {
+uint8_t virtio_blk_write_sector_sync(struct virtio_driver *driver,
+                                     uint64_t sector, void *addr) {
 
   uint8_t blk_io_status = 0xff;
   struct virtio_blk_req_hdr blk_write_hdr;
@@ -86,42 +88,104 @@ uint8_t virtio_blk_read_sector_sync(struct virtio_driver *driver,
   return blk_io_status;
 }
 
-#define MIN(x, y) ((x < y) ? x : y)
 size_t virtio_blk_read_sync(struct virtio_driver *driver, uint8_t *output,
                             uint64_t offset, size_t size) {
   size_t read_amt = 0, last_read_amt = 0;
-  size_t sector_offset = virtio_blk_sector_offset_from_pos(offset);
   for (read_amt = 0; read_amt < size; read_amt += last_read_amt) {
+
+    size_t sector = virtio_blk_sector_from_pos(offset + read_amt);
+    // If we are not right at the start of a sector boundary, there may
+    // need to be an adjustment.
+    size_t sector_offset = virtio_blk_sector_offset_from_pos(offset + read_amt);
+    size_t size_of_content_in_sector = (VIRTIO_BLK_SIZE - sector_offset);
+    // Determine how much to read ... either the amount of interest in this
+    // sector or the remaining bytes to be read, whichever is smaller!
+    last_read_amt = MIN((size - read_amt), size_of_content_in_sector);
+
     char blk[VIRTIO_BLK_SIZE] = {
         0,
     };
-    uint8_t read_result = virtio_blk_read_sector_sync(
-        driver, virtio_blk_sector_from_pos(offset + read_amt), blk);
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+    {
+      eprint_str("(blk) Attempting to read ");
+      eprint_num(last_read_amt);
+      eprint_str(" bytes from sector no ");
+      eprint_num(sector);
+      eprint_str(" at offset ");
+      eprint_num(sector_offset);
+      eprint_str(".\n");
+    }
+#endif
+
+    uint8_t read_result = virtio_blk_read_sector_sync(driver, sector, blk);
     // If the latest read did not get what we wanted, then assume
     // that nothing came back. Tell the caller only about what we know was good.
     if (read_result) {
       return read_amt;
     }
 
+    memcpy(output + read_amt, blk + sector_offset, last_read_amt);
+  }
+
+  return read_amt;
+}
+
+size_t virtio_blk_write_sync(struct virtio_driver *driver, uint8_t *input,
+                             uint64_t offset, size_t size) {
+  size_t write_amt = 0, last_write_amt = 0;
+  for (write_amt = 0; write_amt < size; write_amt += last_write_amt) {
+    char blk[VIRTIO_BLK_SIZE] = {
+        0,
+    };
+
+    size_t sector = virtio_blk_sector_from_pos(offset + write_amt);
+    // If we are not right at the start of a sector boundary, there may
+    // need to be an adjustment.
+    size_t sector_offset =
+        virtio_blk_sector_offset_from_pos(offset + write_amt);
+
+    uint8_t read_result = virtio_blk_read_sector_sync(driver, sector, blk);
+    // If the latest read did not get what we wanted, then assume
+    // that nothing came back. Tell the caller only about what we know was good.
+    if (read_result) {
+      return write_amt;
+    }
+
     size_t size_of_content_in_sector = (VIRTIO_BLK_SIZE - sector_offset);
 
-    // Copy what was read.
-    // Example: Want 1118 bytes.
-    // Second read: min((1118 - (512), VIRTIO_BLK_SIZE)
-    // Second read: min((606        ), VIRTIO_BLK_SIZE)
-    // Second read: 512
-    // Last read:   min(1118 - (512 + 512)), VIRTIO_BLK_SIZE)
-    // Last read:   min(1118 - (1024     )), VIRTIO_BLK_SIZE)
-    // Last read:   min(94                ), VIRTIO_BLK_SIZE1)
-    // Last read:   min(94                ), VIRTIO_BLK_SIZE1)
-    // Last read:   94
-    last_read_amt = MIN((size - read_amt), size_of_content_in_sector);
-    memcpy(output + read_amt, blk + sector_offset, last_read_amt);
+    // Either write what's left or what can fit into this sector, whichever
+    // is the smallest.
+    last_write_amt = MIN((size - write_amt), size_of_content_in_sector);
+
+    // Overwrite what was read with the appropriate user-supplied data.
+    memcpy(blk + sector_offset, input + write_amt, last_write_amt);
+
+#if DEBUG_LEVEL > DEBUG_TRACE
+    {
+      eprint_str("(blk) Attempting to write ");
+      eprint_num(last_write_amt);
+      eprint_str(" bytes to sector no ");
+      eprint_num(sector);
+      eprint_str(" at offset ");
+      eprint_num(sector_offset);
+      eprint_str(".\n");
+    }
+#endif
+
+    // Try to write it all back to the disk.
+    uint8_t write_result = virtio_blk_write_sector_sync(driver, sector, blk);
+
+    // If the latest read did not get what we wanted, then assume
+    // that nothing came back. Tell the caller only about what we know was good.
+    if (write_result) {
+      return write_amt;
+    }
 
     sector_offset = 0;
   }
 
-  return read_amt;
+  return write_amt;
 }
 
 uint64_t virtio_blk_sector_from_pos(uint64_t pos) {

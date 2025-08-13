@@ -4,6 +4,7 @@
 #include "ecall.h"
 #include "io.h"
 #include "virtio.h"
+#include "util.h"
 
 #include "build_config.h"
 
@@ -288,6 +289,15 @@ bool ext2_read_block(struct virtio_driver *driver,
   return result == EXT2_SUPPORTED_BLOCK_SIZE;
 }
 
+bool ext2_write_block(struct virtio_driver *driver,
+                      struct ext2_superblock *superblock, uint32_t block_no,
+                      uint32_t block_offset, char *buffer) {
+  size_t result = virtio_blk_write_sync(
+      driver, buffer, block_no * EXT2_SUPPORTED_BLOCK_SIZE + block_offset,
+      EXT2_SUPPORTED_BLOCK_SIZE);
+  return result == EXT2_SUPPORTED_BLOCK_SIZE;
+}
+
 bool read_superblock(struct virtio_driver *driver,
                      struct ext2_superblock *superblock) {
 
@@ -460,6 +470,51 @@ bool test_ext2_implementation() {
 size_t read_from_ino(struct virtio_driver *driver,
                      struct ext2_superblock *superblock, uint32_t ino,
                      char *buffer, size_t offset, size_t len) {
+  struct ext2_inode inode;
+
+  bool found_inode = inode_from_ino(driver, superblock, &inode, ino);
+  if (!found_inode) {
+    return (size_t)-1;
+  }
+
+  for (size_t redden = 0, red = 0; redden < len; redden += red) {
+    size_t next_read_pos = offset + redden;
+    size_t next_read_block_idx = next_read_pos / EXT2_SUPPORTED_BLOCK_SIZE;
+    size_t next_read_block_offset = next_read_pos % EXT2_SUPPORTED_BLOCK_SIZE;
+    uint32_t next_read_block_no = inode.i_block[next_read_block_idx];
+
+    size_t next_read_len = MIN(EXT2_SUPPORTED_BLOCK_SIZE - next_read_block_offset, len - redden);
+
+    // We want to read next_write_len bytes from next_write_block_no at offset
+    // next_write_block_offset.
+#if DEBUG_LEVEL > DEBUG_TRACE
+{
+  eprint_str("(ext2) Attempting to read ");
+  eprint_num(next_read_len);
+  eprint_str(" bytes from block no ");
+  eprint_num(next_read_block_no);
+  eprint_str(" at offset ");
+  eprint_num(next_read_block_offset);
+  eprint_str(".\n");
+}
+#endif
+
+    red =
+        virtio_blk_read_sync(driver, buffer + redden,
+                              next_read_block_no * EXT2_SUPPORTED_BLOCK_SIZE +
+                                  next_read_block_offset,
+                              next_read_len);
+    if (red != next_read_len) {
+      return redden;
+    }
+  }
+
+  return len;
+}
+
+size_t write_to_ino(struct virtio_driver *driver,
+                    struct ext2_superblock *superblock, uint32_t ino,
+                    char *buffer, size_t offset, size_t len) {
   char block_buffer[EXT2_SUPPORTED_BLOCK_SIZE];
   struct ext2_inode inode;
 
@@ -468,22 +523,37 @@ size_t read_from_ino(struct virtio_driver *driver,
     return (size_t)-1;
   }
 
-  size_t block_list_offset = offset / EXT2_SUPPORTED_BLOCK_SIZE;
-  size_t caller_buffer_offset = offset % EXT2_SUPPORTED_BLOCK_SIZE;
+  for (size_t written = 0, wrote = 0; written < len; written += wrote) {
+    size_t next_write_pos = offset + written;
+    size_t next_write_block_idx = next_write_pos / EXT2_SUPPORTED_BLOCK_SIZE;
+    size_t next_write_block_offset = next_write_pos % EXT2_SUPPORTED_BLOCK_SIZE;
+    uint32_t next_write_block_no = inode.i_block[next_write_block_idx];
 
-  size_t read_result = ext2_read_block(
-      driver, superblock, inode.i_block[block_list_offset], block_buffer);
+    size_t next_write_len = MIN(EXT2_SUPPORTED_BLOCK_SIZE - next_write_block_offset, len - written);
 
+    // We want to write next_write_len bytes to next_write_block_no at offset
+    // next_write_block_offset.
 #if DEBUG_LEVEL > DEBUG_TRACE
-  eprint_str("Read from offset ");
-  eprint_num(offset);
-  eprint_str(" from inode #");
-  eprint_num(ino);
-  eprint_buffer(" and got data", (uint8_t *)block_buffer,
-                EXT2_SUPPORTED_BLOCK_SIZE);
+{
+  eprint_str("(ext2) Attempting to write ");
+  eprint_num(next_write_len);
+  eprint_str(" bytes from block no ");
+  eprint_num(next_write_block_no);
+  eprint_str(" at offset ");
+  eprint_num(next_write_block_offset);
+  eprint_str(".\n");
+}
 #endif
 
-  memcpy(buffer, block_buffer + caller_buffer_offset, len);
+    wrote =
+        virtio_blk_write_sync(driver, buffer + written,
+                              next_write_block_no * EXT2_SUPPORTED_BLOCK_SIZE +
+                                  next_write_block_offset,
+                              next_write_len);
+    if (wrote != next_write_len) {
+      return written;
+    }
+  }
 
-  return 1;
+  return len;
 }
