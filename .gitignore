@@ -1,2 +1,3 @@
 include/build_config.h
 compile_commands.json
+cicd/clang-format-configure
