@@ -80,4 +80,5 @@ target_link_options(standalone-driver PRIVATE -static)
 add_custom_target(make-simple-qcow2 qemu-img "create" "-f" "qcow2" "${CMAKE_SOURCE_DIR}/test/fs/simple.qcow2" "512B")
 
 file(GENERATE OUTPUT ${CMAKE_SOURCE_DIR}/cicd/clang-format-configure CONTENT "${FORMATTABLE_FILES}")
-add_custom_target(clang-format COMMAND ${CMAKE_SOURCE_DIR}/cicd/format.sh "${CMAKE_SOURCE_DIR}/cicd/clang-format-configure")
+add_custom_target(clang-format COMMAND ${CMAKE_SOURCE_DIR}/cicd/format.sh "format" "${CMAKE_SOURCE_DIR}/cicd/clang-format-configure")
+

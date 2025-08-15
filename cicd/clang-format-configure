@@ -1,0 +1,16 @@
+/home/hawkinsw/code/demandos/./src/io.c
+/home/hawkinsw/code/demandos/./src/strap_handler.c
+/home/hawkinsw/code/demandos/./src/system.c
+/home/hawkinsw/code/demandos/./src/pci.c
+/home/hawkinsw/code/demandos/./src/util.c
+/home/hawkinsw/code/demandos/./src/virtio.c
+/home/hawkinsw/code/demandos/./src/virtio_driver.c
+/home/hawkinsw/code/demandos/./src/blk.c
+/home/hawkinsw/code/demandos/./src/e.c
+/home/hawkinsw/code/demandos/./src/os.c
+/home/hawkinsw/code/demandos/./src/argcv.c
+/home/hawkinsw/code/demandos/./src/memory.c
+/home/hawkinsw/code/demandos/./src/ext2.c
+/home/hawkinsw/code/demandos/./src/demandos.c
+/home/hawkinsw/code/demandos/./src/runtime.c
+/home/hawkinsw/code/demandos/./test/unit_test.c
