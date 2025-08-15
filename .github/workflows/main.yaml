@@ -9,5 +9,5 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         run: |
-        clang-format --version
-        ./cicd/format.sh check ./cicd/clang-format-configure
+          clang-format --version
+          ./cicd/format.sh check ./cicd/clang-format-configure
