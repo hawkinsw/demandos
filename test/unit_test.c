@@ -1,3 +1,4 @@
+#include "demandos.h"
 #include "event.h"
 #include "system.h"
 #include <fcntl.h>
@@ -7,19 +8,6 @@
 #include <string.h>
 #include <sys/random.h>
 #include <unistd.h>
-
-uint64_t mount_hd() {
-  register uint64_t syscall_no asm("a7") = 210;
-  register uint64_t a0 asm("a0") = 0;
-  register uint64_t a1 asm("a1") = 0;
-  uint64_t result = 0;
-
-  asm volatile("scall\n" : "+r"(a0) : "r"(syscall_no), "r"(a1) : "memory");
-
-  result = a0;
-
-  return result;
-}
 
 uint64_t run_internal_unit_tests() {
   register uint64_t syscall_no asm("a7") = 211;

@@ -28,6 +28,7 @@ set(SRCS
 	./src/argcv.c
 	./src/memory.c
 	./src/ext2.c
+	./src/demandos.c
 )
 
 set(RUNTIME_SRCS 
