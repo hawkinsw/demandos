@@ -8,6 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        run: |
+      - run: |
           clang-format --version
           ./cicd/format.sh check ./cicd/clang-format-configure
