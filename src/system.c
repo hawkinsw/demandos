@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <time.h>
 
 // Holds the value when the next timer will fire.
 volatile uint64_t shadow_stime = (uint64_t)-1;
@@ -56,4 +58,22 @@ void sys_poweroff() {
       :
       :
       : "a0", "a1", "a7", "a6");
+}
+
+bool system_time(uint64_t clockid, struct timespec *tp) {
+  // Based on the goldfish RTC
+  // See, e.g.,
+  // https://nuttx.apache.org/docs/latest/platforms/arm/goldfish/goldfish_timer.html
+  // or
+  // https://android.googlesource.com/platform/external/qemu.git/+/master/docs/GOLDFISH-VIRTUAL-HARDWARE.TXT
+  uint8_t *raw = (uint8_t *)0x00101000;
+  uint32_t low = *(uint32_t *)raw;
+  uint32_t high = *(uint32_t *)(raw + 4);
+
+  uint64_t time = (uint64_t)high << 32 | low;
+
+  tp->tv_sec = time / 1000000000;
+  tp->tv_nsec = time % 1000000000;
+
+  return true;
 }

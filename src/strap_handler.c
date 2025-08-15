@@ -317,19 +317,7 @@ uint64_t clock_gettime32_s(uint64_t _clockid, uint64_t _tp, uint64_t c,
   clockid_t clockid = (clockid_t)_clockid;
   struct timespec *tp = (struct timespec *)_tp;
 
-  // Based on the goldfish RTC
-  // See, e.g.,
-  // https://nuttx.apache.org/docs/latest/platforms/arm/goldfish/goldfish_timer.html
-  // or
-  // https://android.googlesource.com/platform/external/qemu.git/+/master/docs/GOLDFISH-VIRTUAL-HARDWARE.TXT
-  uint8_t *raw = (uint8_t *)0x00101000;
-  uint32_t low = *(uint32_t *)raw;
-  uint32_t high = *(uint32_t *)(raw + 4);
-
-  uint64_t time = (uint64_t)high << 32 | low;
-
-  tp->tv_sec = time / 1000000000;
-  tp->tv_nsec = time % 1000000000;
+  return (uint64_t)system_time(clockid, tp);
 
   return 0;
 }
