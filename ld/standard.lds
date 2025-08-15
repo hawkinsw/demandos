@@ -303,10 +303,20 @@ SECTIONS
   } > demandos_managed
 
   .kernel : {
-    /* Now, let_s give ourselves some space for storing metadata! */
+    /* Now, let's give ourselves some space for storing metadata! */
    _kernel_metadata = .;
     . += 8192;
 		. = ALIGN(4096);
+  } > demandos_managed
+
+  .forever : {
+    /* Now, let_s give ourselves some space for storing items that will be
+     * present for the entire execution of the OS!
+     */
+   _forever_storage_start = .;
+		. = ALIGN(4096);
+    . += 8192 * 10;
+   _forever_storage_stop = .;
   } > demandos_managed
 
   .heap : {

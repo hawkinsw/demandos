@@ -3,7 +3,7 @@
 #include "demandos.h"
 #include "e.h"
 #include "ecall.h"
-#include "smemory.h"
+#include "memory.h"
 #include "system.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -122,7 +122,7 @@ void vring_init(struct vring *vring, size_t qsz) {
 
   size_t memsize = virtq_size(qsz);
 
-  void *vring_shared_space = salign(memsize, 4096);
+  void *vring_shared_space = forever_alloc_aligned(memsize, 4096);
 
   vring->size = memsize;
   vring->bouncebufs = NULL;

@@ -160,3 +160,26 @@ void *DEMANDOS_INTERNAL(malloc)(size_t size) {
   }
   return NULL;
 }
+
+extern uint64_t _forever_storage_start;
+extern uint64_t _forever_storage_stop;
+
+void *forever_alloc_aligned(size_t size, size_t align) {
+  static void *forever_storage_frontier = (void*)&_forever_storage_start;
+
+  void *forever_storage_stop = (void*)&_forever_storage_stop;
+
+  void *forever_storage_aligned_start = (void*)ALIGN_UP((size_t)forever_storage_frontier, align);
+
+  if (forever_storage_aligned_start + size > forever_storage_stop) {
+    eprint_str("There is no more forever space left!\n");
+    return NULL;
+  }
+
+  void* alloced = forever_storage_aligned_start;
+
+  forever_storage_frontier = forever_storage_aligned_start + size;
+
+  return (void *)alloced;
+}
+

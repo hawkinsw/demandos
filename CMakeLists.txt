@@ -15,7 +15,6 @@ set(DRIVER_SRCS
 set(SRCS 
 	./src/boot.S
 	./src/io.c
-	./src/smemory.c
 	./src/strap.S
 	./src/strap_handler.c
 	./src/system.c
