@@ -3,8 +3,8 @@
 #include "e.h"
 #include "ecall.h"
 #include "io.h"
-#include "virtio.h"
 #include "util.h"
+#include "virtio.h"
 
 #include "build_config.h"
 
@@ -34,10 +34,8 @@ bool bg_from_bgno(struct virtio_driver *driver, struct ext2_blockgroup *rbg,
   return true;
 }
 
-bool inode_from_ino(struct virtio_driver *driver,
-                    struct ext2_superblock *superblock,
-                    struct ext2_inode *rinode, uint32_t ino) {
-
+uint64_t ino_disk_offset(struct virtio_driver *driver,
+                         struct ext2_superblock *superblock, uint32_t ino) {
   uint32_t inode_table_block_group =
       INODE_TABLE_LOC(ino, superblock->s_inodes_per_group);
   uint32_t inode_table_index =
@@ -52,39 +50,34 @@ bool inode_from_ino(struct virtio_driver *driver,
   }
 #endif
 
-  uint8_t buffer[512] = {
-      0,
-  };
-
-  // Calculate the sector for the _primary_ block group containing the inode
-  // table that contains this inode (got that?)!
-  uint64_t inode_table_block_group_sector = virtio_blk_sector_from_pos(
-      1024 + 1024 +
-      (inode_table_block_group * 1024 * superblock->s_blocks_per_group));
-  uint64_t inode_table_block_group_sector_offset =
-      virtio_blk_sector_offset_from_pos(
-          1024 + 1024 +
-          (inode_table_block_group * 1024 * superblock->s_blocks_per_group));
-
   // Read in the block group.
   struct ext2_blockgroup bg;
   uint8_t result = bg_from_bgno(driver, &bg, inode_table_block_group);
 
+  return bg.bg_inode_table * EXT2_SUPPORTED_BLOCK_SIZE +
+         inode_table_index * sizeof(struct ext2_inode);
+}
+
+bool inode_to_ino(struct virtio_driver *driver,
+                  struct ext2_superblock *superblock, struct ext2_inode *rinode,
+                  uint32_t ino) {
+  uint64_t ino_position = ino_disk_offset(driver, superblock, ino);
+  size_t result = virtio_blk_write_sync(driver, (void *)rinode, ino_position,
+                                        sizeof(struct ext2_inode));
+
+  return result == sizeof(struct ext2_inode);
+}
+
+bool inode_from_ino(struct virtio_driver *driver,
+                    struct ext2_superblock *superblock,
+                    struct ext2_inode *rinode, uint32_t ino) {
   // Read in the inode contents.
-  uint64_t inode_table_entry_position =
-      bg.bg_inode_table * 1024 +
-      inode_table_index * /*sizeof(struct ext2_inode)*/ 256;
-  uint64_t inode_table_entry_sector =
-      virtio_blk_sector_from_pos(inode_table_entry_position);
-  uint64_t inode_table_entry_sector_offset =
-      virtio_blk_sector_offset_from_pos(inode_table_entry_position);
+  uint64_t inode_position = ino_disk_offset(driver, superblock, ino);
 
-  result =
-      virtio_blk_read_sector_sync(driver, inode_table_entry_sector, buffer);
-  memcpy(rinode, buffer + inode_table_entry_sector_offset,
-         sizeof(struct ext2_inode));
+  size_t result = virtio_blk_read_sync(driver, (void *)rinode, inode_position,
+                                       sizeof(struct ext2_inode));
 
-  return true;
+  return result == sizeof(struct ext2_inode);
 }
 
 void debug_dirent(struct virtio_driver *driver,
