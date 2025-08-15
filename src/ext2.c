@@ -476,27 +476,27 @@ size_t read_from_ino(struct virtio_driver *driver,
     size_t next_read_block_offset = next_read_pos % EXT2_SUPPORTED_BLOCK_SIZE;
     uint32_t next_read_block_no = inode.i_block[next_read_block_idx];
 
-    size_t next_read_len = MIN(EXT2_SUPPORTED_BLOCK_SIZE - next_read_block_offset, len - redden);
+    size_t next_read_len =
+        MIN(EXT2_SUPPORTED_BLOCK_SIZE - next_read_block_offset, len - redden);
 
     // We want to read next_write_len bytes from next_write_block_no at offset
     // next_write_block_offset.
 #if DEBUG_LEVEL > DEBUG_TRACE
-{
-  eprint_str("(ext2) Attempting to read ");
-  eprint_num(next_read_len);
-  eprint_str(" bytes from block no ");
-  eprint_num(next_read_block_no);
-  eprint_str(" at offset ");
-  eprint_num(next_read_block_offset);
-  eprint_str(".\n");
-}
+    {
+      eprint_str("(ext2) Attempting to read ");
+      eprint_num(next_read_len);
+      eprint_str(" bytes from block no ");
+      eprint_num(next_read_block_no);
+      eprint_str(" at offset ");
+      eprint_num(next_read_block_offset);
+      eprint_str(".\n");
+    }
 #endif
 
-    red =
-        virtio_blk_read_sync(driver, buffer + redden,
-                              next_read_block_no * EXT2_SUPPORTED_BLOCK_SIZE +
-                                  next_read_block_offset,
-                              next_read_len);
+    red = virtio_blk_read_sync(driver, buffer + redden,
+                               next_read_block_no * EXT2_SUPPORTED_BLOCK_SIZE +
+                                   next_read_block_offset,
+                               next_read_len);
     if (red != next_read_len) {
       return redden;
     }
@@ -522,20 +522,21 @@ size_t write_to_ino(struct virtio_driver *driver,
     size_t next_write_block_offset = next_write_pos % EXT2_SUPPORTED_BLOCK_SIZE;
     uint32_t next_write_block_no = inode.i_block[next_write_block_idx];
 
-    size_t next_write_len = MIN(EXT2_SUPPORTED_BLOCK_SIZE - next_write_block_offset, len - written);
+    size_t next_write_len =
+        MIN(EXT2_SUPPORTED_BLOCK_SIZE - next_write_block_offset, len - written);
 
     // We want to write next_write_len bytes to next_write_block_no at offset
     // next_write_block_offset.
 #if DEBUG_LEVEL > DEBUG_TRACE
-{
-  eprint_str("(ext2) Attempting to write ");
-  eprint_num(next_write_len);
-  eprint_str(" bytes from block no ");
-  eprint_num(next_write_block_no);
-  eprint_str(" at offset ");
-  eprint_num(next_write_block_offset);
-  eprint_str(".\n");
-}
+    {
+      eprint_str("(ext2) Attempting to write ");
+      eprint_num(next_write_len);
+      eprint_str(" bytes from block no ");
+      eprint_num(next_write_block_no);
+      eprint_str(" at offset ");
+      eprint_num(next_write_block_offset);
+      eprint_str(".\n");
+    }
 #endif
 
     wrote =
@@ -549,4 +550,52 @@ size_t write_to_ino(struct virtio_driver *driver,
   }
 
   return len;
+}
+
+bool set_atime_for_ino(struct virtio_driver *driver,
+                       struct ext2_superblock *superblock, uint32_t ino,
+                       uint32_t atime) {
+
+  struct ext2_inode inode;
+
+  if (!inode_from_ino(driver, superblock, &inode, ino)) {
+    return false;
+  };
+
+  inode.i_atime = atime;
+
+  return inode_to_ino(driver, superblock, &inode, ino);
+
+}
+
+bool set_mtime_for_ino(struct virtio_driver *driver,
+                       struct ext2_superblock *superblock, uint32_t ino,
+                       uint32_t mtime) {
+
+  struct ext2_inode inode;
+
+  if (!inode_from_ino(driver, superblock, &inode, ino)) {
+    return false;
+  };
+
+  inode.i_mtime = mtime;
+
+  return inode_to_ino(driver, superblock, &inode, ino);
+
+}
+
+bool set_ctime_for_ino(struct virtio_driver *driver,
+                       struct ext2_superblock *superblock, uint32_t ino,
+                       uint32_t ctime) {
+
+  struct ext2_inode inode;
+
+  if (!inode_from_ino(driver, superblock, &inode, ino)) {
+    return false;
+  };
+
+  inode.i_ctime = ctime;
+
+  return inode_to_ino(driver, superblock, &inode, ino);
+
 }

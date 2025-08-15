@@ -106,4 +106,17 @@ bool inode_from_path(struct virtio_driver *driver,
 bool ext2_read_block(struct virtio_driver *driver,
                 struct ext2_superblock *superblock, uint32_t block_no,
                 char *buffer);
+
+bool set_atime_for_ino(struct virtio_driver *driver,
+                       struct ext2_superblock *superblock, uint32_t ino,
+                       uint32_t atime);
+
+bool set_mtime_for_ino(struct virtio_driver *driver,
+                       struct ext2_superblock *superblock, uint32_t ino,
+                       uint32_t mtime);
+
+bool set_ctime_for_ino(struct virtio_driver *driver,
+                       struct ext2_superblock *superblock, uint32_t ino,
+                       uint32_t ctime);
+
 #endif

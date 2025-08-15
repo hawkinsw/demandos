@@ -3,11 +3,13 @@
 #include "build_config.h"
 #include "ecall.h"
 #include "ext2.h"
+#include "system.h"
 #include "virtio.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "e.h"
@@ -58,10 +60,30 @@ int disk_write_handler(uint64_t fd, void *buf, size_t size) {
 
   struct io_descriptor *iod = &fds[fd];
   struct ext2_superblock *superb = superblock_for_ino(iod->ino);
-  return write_to_ino(driver, superb, iod->ino, buf, iod->pos, size);
+  int write_result =
+      write_to_ino(driver, superb, iod->ino, buf, iod->pos, size);
+
+  struct timespec current_time;
+
+  if (!system_time(1, &current_time)) {
+    return -1;
+  }
+
+  if (!set_mtime_for_ino(driver, superb, iod->ino, current_time.tv_sec)) {
+    return -1;
+  }
+
+  return write_result;
 }
 
 int disk_read_handler(uint64_t fd, void *buf, size_t size) {
+
+  // Optimization. Check whether this optimization is allowed by
+  // POSIX.
+  if (size == 0) {
+    return 0;
+  }
+
   struct virtio_driver *driver = find_virtio_driver(1);
 
   if (!driver || !driver->initialized) {
@@ -74,7 +96,24 @@ int disk_read_handler(uint64_t fd, void *buf, size_t size) {
 
   struct io_descriptor *iod = &fds[fd];
   struct ext2_superblock *superb = superblock_for_ino(iod->ino);
-  return read_from_ino(driver, superb, iod->ino, buf, iod->pos, size);
+  int read_result =
+      read_from_ino(driver, superb, iod->ino, buf, iod->pos, size);
+
+  struct timespec current_time;
+
+  if (!system_time(1, &current_time)) {
+    return -1;
+  }
+
+  // From POSIX:
+  // Upon successful completion [of read], where nbyte is greater than 0, read() shall
+  // mark for update the st_atime field of the file, and shall return the number
+  // of bytes read.
+  if (!set_atime_for_ino(driver, superb, iod->ino, current_time.tv_sec)) {
+    return -1;
+  }
+
+  return read_result;
 }
 
 int disk_seek_handler(uint64_t fd, long int off, int whence) {
