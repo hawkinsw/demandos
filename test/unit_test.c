@@ -132,8 +132,9 @@ int main() {
   };
 
   /*
-   * Setup two tests that stress the ext2 implementation and the Virtio Blk driver by
-   * reading and writing random data across block and sector boundaries.
+   * Setup two tests that stress the ext2 implementation and the Virtio Blk
+   * driver by reading and writing random data across block and sector
+   * boundaries.
    */
   char *read_write_test_names[] = {
       "random5_across_block",
@@ -163,7 +164,8 @@ int main() {
     };
 
     ssize_t getrandom_result =
-        getrandom(random5_file_read_write_test_data, read_write_test_lengths[test_index], GRND_RANDOM);
+        getrandom(random5_file_read_write_test_data,
+                  read_write_test_lengths[test_index], GRND_RANDOM);
 
     printf("(%s) Randomness to write: ", read_write_test_names[test_index]);
     for (size_t i = 0; i < read_write_test_lengths[test_index]; i++) {
@@ -176,7 +178,8 @@ int main() {
                                  read_write_test_offsets[test_index], SEEK_SET);
 
     if (actual_offset != read_write_test_offsets[test_index]) {
-      printf("(%s) Error: Did not seek to the proper location (for write)... expected %lx "
+      printf("(%s) Error: Did not seek to the proper location (for write)... "
+             "expected %lx "
              "and got %lx\n",
              read_write_test_names[test_index],
              read_write_test_offsets[test_index], actual_offset);
@@ -185,7 +188,8 @@ int main() {
     }
 
     size_t actually_written = write(random5_file_read_write_test_fd,
-                                    random5_file_read_write_test_data, read_write_test_lengths[test_index]);
+                                    random5_file_read_write_test_data,
+                                    read_write_test_lengths[test_index]);
 
     if (actually_written != read_write_test_lengths[test_index]) {
       printf("(%s) Error: Did not write the expected amount "
@@ -194,10 +198,11 @@ int main() {
       random5_file_read_write_test_failure = true;
     }
 
-    actual_offset = lseek(random5_file_read_write_test_fd, read_write_test_offsets[test_index],
-          SEEK_SET);
+    actual_offset = lseek(random5_file_read_write_test_fd,
+                          read_write_test_offsets[test_index], SEEK_SET);
     if (actual_offset != read_write_test_offsets[test_index]) {
-      printf("(%s) Error: Did not seek to the proper location (for read) ... expected %lx "
+      printf("(%s) Error: Did not seek to the proper location (for read) ... "
+             "expected %lx "
              "and got %lx\n",
              read_write_test_names[test_index],
              read_write_test_offsets[test_index], actual_offset);
@@ -206,7 +211,8 @@ int main() {
     }
 
     size_t actually_read = read(random5_file_read_write_test_fd,
-                                random5_file_read_write_test_readback_data, read_write_test_lengths[test_index]);
+                                random5_file_read_write_test_readback_data,
+                                read_write_test_lengths[test_index]);
     if (actually_read != read_write_test_lengths[test_index]) {
       printf("(%s) Error: Did not read the expected amount "
              "of bytes.\n",

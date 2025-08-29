@@ -8,7 +8,7 @@
 
 // Holds the value when the next timer will fire.
 volatile uint64_t shadow_stime = (uint64_t)-1;
-#define STIME_UNSET ((uint64_t)-1)
+#define STIME_UNSET ((uint64_t) - 1)
 
 void set_stimecmp(uint64_t future) {
   // TODO: This should queue what is not immediately set!
