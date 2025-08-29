@@ -1,9 +1,9 @@
 #include "system.h"
 #include "build_config.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdbool.h>
 #include <time.h>
 
 // Holds the value when the next timer will fire.

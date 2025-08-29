@@ -5,7 +5,6 @@
 
 #include "build_config.h"
 #include "demandos.h"
-#include "e.h"
 #include "ecall.h"
 #include "io.h"
 #include "runtime.h"
@@ -41,10 +40,10 @@ void timer_interrupt_handler(void) {
   unset_stimecmp();
 
 #if DEBUG_LEVEL > DEBUG_TRACE
-{
-  char msg[] = "Timer went off!\n";
-  eprint_str(msg);
-}
+  {
+    char msg[] = "Timer went off!\n";
+    eprint_str(msg);
+  }
 #endif
 
   if (kernel->deferred.wakeup_time) {
@@ -149,14 +148,13 @@ uint64_t openat_s(uint64_t _dirfd, uint64_t _pathname, uint64_t _flags,
   return open_fd(pathname);
 }
 
-uint64_t close_s(uint64_t _fd, uint64_t b, uint64_t c,
-                  uint64_t d, uint64_t e, uint64_t f) {
+uint64_t close_s(uint64_t _fd, uint64_t b, uint64_t c, uint64_t d, uint64_t e,
+                 uint64_t f) {
 
   int fd = (int)_fd;
 
   return close_fd(fd);
 }
-
 
 uint64_t seek_s(uint64_t _fd, uint64_t _offset, uint64_t _whence, uint64_t d,
                 uint64_t e, uint64_t f) {
@@ -258,7 +256,7 @@ uint64_t demand_s(uint64_t _timeout, uint64_t _event_p, uint64_t c, uint64_t d,
   }
 #endif
 
-  //set_stimecmp(get_stime() + 5 * 1e7);
+  // set_stimecmp(get_stime() + 5 * 1e7);
   return WAIT_EVENT_OCCURRED;
 }
 

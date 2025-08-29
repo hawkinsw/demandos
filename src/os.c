@@ -1,7 +1,7 @@
 #include "os.h"
 #include "argcv.h"
 #include "build_config.h"
-#include "e.h"
+#include "ecall.h"
 #include "system.h"
 #include "virtio.h"
 

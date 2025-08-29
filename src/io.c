@@ -1,5 +1,4 @@
 #include "io.h"
-#include "blk.h"
 #include "build_config.h"
 #include "ecall.h"
 #include "ext2.h"
@@ -12,14 +11,14 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "e.h"
+#include "ecall.h"
 
 // We currently support no more than 100 open file descriptors.
 struct io_descriptor fds[100] = {};
 uint64_t max_fd = 100;
 
 bool is_fd_valid(uint64_t fd) { return (fd < max_fd); }
-bool is_fd_open(uint64_t fd) { return ( is_fd_valid(fd) && fds[fd].open); }
+bool is_fd_open(uint64_t fd) { return (is_fd_valid(fd) && fds[fd].open); }
 int next_fd() {
   for (size_t i = 0; i < max_fd; i++) {
     if (!fds[i].open) {
@@ -106,9 +105,9 @@ int disk_read_handler(uint64_t fd, void *buf, size_t size) {
   }
 
   // From POSIX:
-  // Upon successful completion [of read], where nbyte is greater than 0, read() shall
-  // mark for update the st_atime field of the file, and shall return the number
-  // of bytes read.
+  // Upon successful completion [of read], where nbyte is greater than 0, read()
+  // shall mark for update the st_atime field of the file, and shall return the
+  // number of bytes read.
   if (!set_atime_for_ino(driver, superb, iod->ino, current_time.tv_sec)) {
     return -1;
   }

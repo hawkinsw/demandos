@@ -1,11 +1,11 @@
 #include "runtime.h"
+#include "demandos.h"
 #include "event.h"
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/random.h>
 #include <unistd.h>
-#include "demandos.h"
 
 int main() {
   volatile uint64_t ctr = 0;

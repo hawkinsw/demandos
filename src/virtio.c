@@ -1,7 +1,6 @@
 #include "virtio.h"
 #include "build_config.h"
 #include "demandos.h"
-#include "e.h"
 #include "ecall.h"
 #include "memory.h"
 #include "system.h"
@@ -54,7 +53,6 @@ void vring_post_descr(struct vring *vring, uint32_t used_descr_idx) {
   vring->avail->idx = vring->bookeeping.avail_next;
   WRITE_FENCE();
 }
-
 
 void vring_wait_completion(struct vring *vring) {
 

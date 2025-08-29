@@ -13,8 +13,7 @@
  * Copyright (C) 2025, Will Hawkins <whh8b@obs.cr>
  */
 
-
- .data
+.data
 
  _trap_handlers:
  .quad 0

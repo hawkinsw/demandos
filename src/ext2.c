@@ -1,8 +1,6 @@
 #include "ext2.h"
 #include "blk.h"
-#include "e.h"
 #include "ecall.h"
-#include "io.h"
 #include "util.h"
 #include "virtio.h"
 
@@ -565,7 +563,6 @@ bool set_atime_for_ino(struct virtio_driver *driver,
   inode.i_atime = atime;
 
   return inode_to_ino(driver, superblock, &inode, ino);
-
 }
 
 bool set_mtime_for_ino(struct virtio_driver *driver,
@@ -581,7 +578,6 @@ bool set_mtime_for_ino(struct virtio_driver *driver,
   inode.i_mtime = mtime;
 
   return inode_to_ino(driver, superblock, &inode, ino);
-
 }
 
 bool set_ctime_for_ino(struct virtio_driver *driver,
@@ -597,5 +593,4 @@ bool set_ctime_for_ino(struct virtio_driver *driver,
   inode.i_ctime = ctime;
 
   return inode_to_ino(driver, superblock, &inode, ino);
-
 }
